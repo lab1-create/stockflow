@@ -22,6 +22,7 @@ const pool = new Pool({
   ssl: databaseSsl ? { rejectUnauthorized: false } : undefined
 });
 const liveClients = new Set();
+const allowedUserRoles = new Set(["admin", "tecnico", "estoque"]);
 
 app.use(cors());
 app.use(express.json());
@@ -426,6 +427,85 @@ async function approveStockRequest({ requestId, scannedCode, adminName }) {
   }
 }
 
+function normalizeUserPayload(body) {
+  return {
+    name: String(body.name || "").trim(),
+    pin: String(body.pin || "").trim(),
+    role: String(body.role || "").trim(),
+    active: body.active === true || body.active === "true"
+  };
+}
+
+function validateUserPayload(user) {
+  if (!user.name) {
+    const error = new Error("Nome vazio nao e permitido.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!user.pin) {
+    const error = new Error("PIN vazio nao e permitido.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!allowedUserRoles.has(user.role)) {
+    const error = new Error("Perfil invalido.");
+    error.status = 400;
+    throw error;
+  }
+}
+
+async function requireAdminUser(req) {
+  const actorName = String(req.headers["x-stockflow-user"] || "").trim();
+  if (!actorName) {
+    const error = new Error("Administrador nao informado.");
+    error.status = 403;
+    throw error;
+  }
+
+  const result = await pool.query(
+    "SELECT id, name, role FROM app_users WHERE name = $1 AND role = 'admin' AND active = TRUE",
+    [actorName]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error("Acesso permitido apenas para administradores.");
+    error.status = 403;
+    throw error;
+  }
+
+  return result.rows[0];
+}
+
+async function ensureUniqueUserName(name, ignoredId = null) {
+  const result = await pool.query(
+    `
+      SELECT id
+      FROM app_users
+      WHERE lower(name) = lower($1) AND ($2::uuid IS NULL OR id <> $2::uuid)
+      LIMIT 1
+    `,
+    [name, ignoredId]
+  );
+
+  if (result.rows[0]) {
+    const error = new Error("Ja existe um usuario com este nome.");
+    error.status = 409;
+    throw error;
+  }
+}
+
+async function getUserById(id) {
+  const result = await pool.query("SELECT id, name, role, active FROM app_users WHERE id = $1", [id]);
+  if (!result.rows[0]) {
+    const error = new Error("Usuario nao encontrado.");
+    error.status = 404;
+    throw error;
+  }
+  return result.rows[0];
+}
+
 app.get("/api/health", async (_req, res, next) => {
   try {
     await pool.query("SELECT 1");
@@ -481,6 +561,93 @@ app.post("/api/login", async (req, res, next) => {
     }
 
     res.json({ user: result.rows[0], state: await getBootstrap() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/users", async (req, res, next) => {
+  try {
+    await requireAdminUser(req);
+    const result = await pool.query("SELECT id, name, role, active FROM app_users ORDER BY role, name");
+    res.json({ users: result.rows });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/users", async (req, res, next) => {
+  try {
+    await requireAdminUser(req);
+    const user = normalizeUserPayload(req.body);
+    validateUserPayload(user);
+    await ensureUniqueUserName(user.name);
+
+    const result = await pool.query(
+      `
+        INSERT INTO app_users (name, role, pin_code, active)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, role, active
+      `,
+      [user.name, user.role, user.pin, user.active]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/users/:id", async (req, res, next) => {
+  try {
+    await requireAdminUser(req);
+    await getUserById(req.params.id);
+    const user = normalizeUserPayload(req.body);
+    validateUserPayload(user);
+    await ensureUniqueUserName(user.name, req.params.id);
+
+    const result = await pool.query(
+      `
+        UPDATE app_users
+        SET name = $1, role = $2, pin_code = $3, active = $4
+        WHERE id = $5
+        RETURNING id, name, role, active
+      `,
+      [user.name, user.role, user.pin, user.active, req.params.id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete("/api/users/:id", async (req, res, next) => {
+  try {
+    const actor = await requireAdminUser(req);
+    const user = await getUserById(req.params.id);
+
+    if (String(actor.id) === String(user.id)) {
+      const error = new Error("Nao e permitido excluir o proprio administrador logado.");
+      error.status = 400;
+      throw error;
+    }
+
+    if (user.role === "admin" && user.active) {
+      const admins = await pool.query(
+        "SELECT count(*)::int AS total FROM app_users WHERE role = 'admin' AND active = TRUE AND id <> $1",
+        [user.id]
+      );
+
+      if (admins.rows[0].total === 0) {
+        const error = new Error("Nao e permitido excluir o ultimo administrador ativo.");
+        error.status = 400;
+        throw error;
+      }
+    }
+
+    await pool.query("DELETE FROM app_users WHERE id = $1", [user.id]);
+    res.status(204).send();
   } catch (error) {
     next(error);
   }
