@@ -3,21 +3,25 @@ const API_BASE = "/api";
 const LIVE_CHANNEL = "stockflow-live";
 const TECHNICIAN_DESTINATIONS = {
   Luiz: "Bancada 01",
-  Henrique: "Bancada 02",
+  Bruno: "Bancada 02",
   Joao: "Bancada 03",
-  Gabriel: "Bancada 04"
+  Placo: "Bancada 04",
+  Kaique: "Bancada 05",
+  Cauã: "Bancada 06"
 };
 
 const seedState = {
   users: [
     { name: "Administrador", role: "admin" },
     { name: "Luiz", role: "tecnico" },
-    { name: "Henrique", role: "tecnico" },
+    { name: "Bruno", role: "tecnico" },
     { name: "Joao", role: "tecnico" },
-    { name: "Gabriel", role: "tecnico" }
+    { name: "Placo", role: "tecnico" },
+    { name: "kaique", role: "tecnico" },
+    { name: "Cauã", role: "tecnico" }
   ],
-  technicians: ["Luiz", "Henrique", "Joao", "Gabriel"],
-  destinations: ["Bancada 01", "Bancada 02", "Bancada 03", "Bancada 04", "Servico interno", "Estoque de testes", "Outro"],
+  technicians: ["Luiz", "Bruno", "Joao", "Placo", "Kaique", "Cauã"],
+  destinations: ["Bancada 01", "Bancada 02", "Bancada 03", "Bancada 04", "Bancada 05", "Bancada 06", "Teste"],
   adminName: "Administrador",
   items: [],
   history: [],
@@ -754,7 +758,7 @@ async function handleLogin(event) {
       currentUser = result.user;
     } else {
       const user = (state.users || seedState.users).find((entry) => entry.name === name);
-      const expectedPin = user?.role === "admin" ? "0000" : "1234";
+      const expectedPin = user?.role === "admin" ? "Out@adm" : "Out2021adm";
       if (!user || pin !== expectedPin) throw new Error("Usuario ou PIN invalido.");
       currentUser = user;
     }
