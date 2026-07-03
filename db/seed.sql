@@ -3,7 +3,7 @@ BEGIN;
 INSERT INTO app_users (name, role, pin_code) VALUES
   ('Administrador', 'admin', '0000'),
   ('Luiz', 'tecnico', '1111'),
-  ('Henrique', 'tecnico', '1111'),
+  ('Bruno', 'tecnico', '1111'),
   ('Joao', 'tecnico', '1111'),
   ('Gabriel', 'tecnico', '1111')
 ON CONFLICT (name) DO UPDATE SET
