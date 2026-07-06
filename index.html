@@ -1,206 +1,89 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StockFlow</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body class="locked">
-
-  <section class="login-screen">
-    <form id="login-form" class="login-card">
-      <div class="brand">
-        <div class="brand-mark">s</div>
-        <h2>StockFlow <span style="font-size:14px; font-weight:normal; color:var(--muted); display:block;">Acesso operacional</span></h2>
-      </div>
-      <div class="flow-title">
-        <h2>Selecione seu usuario</h2>
-      </div>
-      
-      <label>
-        Usuario
-        <select id="login-user" required>
-          <option value="" disabled selected>Selecione seu usuario</option>
-          <option value="Administrador">Administrador</option>
-          <option value="Técnico">Técnico Operacional</option>
-        </select>
-      </label>
-
-      <label>
-        PIN
-        <input id="login-pin" type="password" placeholder="0000" maxlength="4" required>
-      </label>
-
-      <button type="submit" class="primary-action wide">Entrar</button>
-      <p id="login-error" style="color:var(--accent-2); margin-top:12px; display:none;"></p>
-    </form>
-  </section>
-
-  <div class="app-container">
-    
-    <header class="header-top">
-      <div class="brand" style="margin-bottom:0;">
-        <div class="brand-mark" style="width:32px; height:32px; font-size:16px;">s</div>
-        <h2 style="font-size:20px; margin:0;">StockFlow <span style="font-weight:normal; color:var(--muted); font-size:16px;">| Painel</span></h2>
-      </div>
-      
-      <div class="header-user-zone">
-        <strong id="session-user-name">Carregando...</strong>
-        <span id="session-user-badge" class="role-badge">---</span>
-        <button class="ghost-btn" onclick="logout()">Sair</button>
-      </div>
-    </header>
-
-    <main class="dashboard-grid">
-      
-      <div class="panel">
-        <div class="panel-head">
-          <h2 style="font-size: 22px;">Insumos em Estoque</h2>
-        </div>
-
-        <div class="table-container">
-          <div class="table-row-insumos table-headers">
-            <span>Código</span>
-            <span>Nome</span>
-            <span>Categoria</span>
-            <span>Qtd</span>
-            <span>Mín</span>
-            <span>Fornecedor</span>
-          </div>
-          <div id="container-insumos">
-            <div class="no-data">Nenhum insumo carregado.</div>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StockFlow ERP</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/login.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/usuarios.css">
+  </head>
+  <body class="locked">
+    <section id="login-screen" class="login-screen">
+      <form id="login-form" class="login-card">
+        <div class="brand">
+          <div class="brand-mark">S</div>
+          <div>
+            <strong>StockFlow</strong>
+            <span>ERP de estoque técnico</span>
           </div>
         </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <h2 style="font-size: 22px;">Solicitações Recentes</h2>
+        <div>
+          <p class="eyebrow">Acesso seguro</p>
+          <h1>Entrar</h1>
         </div>
+        <label>Email<input id="login-email" type="email" autocomplete="username" required placeholder="admin@stockflow.local"></label>
+        <label>Senha<input id="login-senha" type="password" autocomplete="current-password" required placeholder="Senha"></label>
+        <button class="primary-action wide">Entrar</button>
+        <p id="login-error" class="form-error"></p>
+        <p class="muted">Usuários migrados usam o email gerado e a senha igual ao PIN antigo.</p>
+      </form>
+    </section>
 
-        <div class="table-container">
-          <div class="table-row-solicitacoes table-headers">
-            <span>Técnico</span>
-            <span>Item</span>
-            <span>Qtd</span>
+    <div class="app-shell">
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-head">
+          <div class="brand">
+            <div class="brand-mark">S</div>
+            <div>
+              <strong>StockFlow</strong>
+              <span>Painel</span>
+            </div>
           </div>
-          <div id="container-solicitacoes">
-            <div class="no-data">Nenhuma pendência.</div>
-          </div>
+          <button id="toggle-sidebar" class="icon-button">◂</button>
         </div>
-      </div>
+        <div class="nav">
+          <button class="nav-item active admin-only" data-view="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="produtos">Produtos</button>
+          <button class="nav-item" data-view="entradas">Entradas</button>
+          <button class="nav-item" data-view="saidas">Saídas</button>
+          <button class="nav-item admin-only" data-view="historico">Histórico</button>
+          <button class="nav-item admin-only" data-view="relatorios">Relatórios</button>
+          <button class="nav-item admin-only" data-view="usuarios">Usuários</button>
+          <button class="nav-item admin-only" data-view="configuracoes">Configurações</button>
+        </div>
+        <div class="sidebar-footer">
+          <span id="session-label">Sessão</span>
+          <button id="logout-button" class="ghost-action">Sair</button>
+        </div>
+      </aside>
 
-    </main>
-  </div>
+      <main class="workspace">
+        <header class="topbar">
+          <button id="mobile-menu" class="icon-button">☰</button>
+          <div>
+            <p class="eyebrow">StockFlow</p>
+            <h2 id="view-title">Dashboard</h2>
+          </div>
+          <label class="search">Pesquisar<input id="global-search" type="search" placeholder="Produto, código, técnico..."></label>
+        </header>
 
-  <script>
-    let dadosDoApp = { items: [], requests: [] };
+        <section id="dashboard-view" class="view active"></section>
+        <section id="produtos-view" class="view"></section>
+        <section id="entradas-view" class="view"></section>
+        <section id="saidas-view" class="view"></section>
+        <section id="historico-view" class="view"></section>
+        <section id="relatorios-view" class="view"></section>
+        <section id="usuarios-view" class="view"></section>
+        <section id="configuracoes-view" class="view"></section>
+      </main>
+    </div>
 
-    async function checarSessao() {
-      const userSalvo = localStorage.getItem("currentUser");
-      if (userSalvo) {
-        destravarEConfigurar(JSON.parse(userSalvo));
-      }
-    }
-
-    async function buscarDadosDoServidor() {
-      try {
-        const response = await fetch('/api/bootstrap');
-        if (response.ok) {
-          dadosDoApp = await response.json();
-          atualizarTabelasNaTela();
-        }
-      } catch (err) {
-        console.warn("Servidor indisponível, operando localmente.");
-      }
-    }
-
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const user = document.getElementById('login-user').value;
-      const pin = document.getElementById('login-pin').value;
-      const errBox = document.getElementById('login-error');
-
-      try {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: user, pin })
-        });
-        const resultado = await response.json();
-
-        if(!response.ok) throw new Error(resultado.error);
-
-        localStorage.setItem("currentUser", JSON.stringify(resultado.user));
-        destravarEConfigurar(resultado.user, resultado.state);
-
-      } catch (error) {
-        // Fallback local caso o node esteja offline durante seus testes
-        const mockRole = user === "Administrador" ? "admin" : "tech";
-        const mockUser = { name: user, role: mockRole };
-        localStorage.setItem("currentUser", JSON.stringify(mockUser));
-        destravarEConfigurar(mockUser);
-      }
-    });
-
-    function destravarEConfigurar(user, freshState) {
-      document.body.classList.remove('locked');
-      document.getElementById('session-user-name').textContent = user.name;
-      document.getElementById('session-user-badge').textContent = user.role;
-
-      if (freshState) {
-        dadosDoApp = freshState;
-        atualizarTabelasNaTela();
-      } else {
-        buscarDadosDoServidor();
-      }
-    }
-
-    function atualizarTabelasNaTela() {
-      // 1. Atualiza Tabela de Insumos (6 colunas)
-      const boxInsumos = document.getElementById('container-insumos');
-      if (dadosDoApp.items && dadosDoApp.items.length > 0) {
-        boxInsumos.innerHTML = '';
-        dadosDoApp.items.forEach(item => {
-          const div = document.createElement('div');
-          div.className = 'table-row-insumos';
-          div.innerHTML = `
-            <span style="color: var(--muted);">${item.code || '---'}</span>
-            <strong>${item.name}</strong>
-            <span>${item.category || 'Geral'}</span>
-            <span style="font-weight:bold;">${item.qty}</span>
-            <span>${item.min || '0'}</span>
-            <span>${item.provider || '---'}</span>
-          `;
-          boxInsumos.appendChild(div);
-        });
-      }
-
-      // 2. Atualiza Tabela de Solicitações (3 colunas)
-      const boxSolicitacoes = document.getElementById('container-solicitacoes');
-      if (dadosDoApp.requests && dadosDoApp.requests.length > 0) {
-        boxSolicitacoes.innerHTML = '';
-        dadosDoApp.requests.forEach(req => {
-          const div = document.createElement('div');
-          div.className = 'table-row-solicitacoes';
-          div.innerHTML = `
-            <span>${req.techName || 'Técnico'}</span>
-            <strong>${req.itemName}</strong>
-            <span>${req.qty} un</span>
-          `;
-          boxSolicitacoes.appendChild(div);
-        });
-      }
-    }
-
-    function logout() {
-      localStorage.removeItem("currentUser");
-      document.body.classList.add('locked');
-      window.location.reload();
-    }
-
-    document.addEventListener('DOMContentLoaded', checarSessao);
-  </script>
-</body>
+    <dialog id="modal">
+      <form id="modal-form" method="dialog" class="dialog-body"></form>
+    </dialog>
+    <div id="toast-stack" class="toast-stack"></div>
+    <script type="module" src="/js/app.js"></script>
+  </body>
 </html>
