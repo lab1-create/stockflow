@@ -3,22 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StockFlow - Painel Operacional</title>
+  <title>StockFlow</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="locked">
 
-  <section id="login-screen" class="login-screen">
+  <section class="login-screen">
     <form id="login-form" class="login-card">
-      <div class="brand login-brand">
+      <div class="brand">
         <div class="brand-mark">s</div>
-        <div>
-          <strong>StockFlow</strong>
-          <span>Acesso operacional</span>
-        </div>
+        <h2>StockFlow <span style="font-size:14px; font-weight:normal; color:var(--muted); display:block;">Acesso operacional</span></h2>
       </div>
       <div class="flow-title">
-        <p class="eyebrow">Entrar</p>
         <h2>Selecione seu usuario</h2>
       </div>
       
@@ -37,528 +33,165 @@
       </label>
 
       <button type="submit" class="primary-action wide">Entrar</button>
-      <p id="login-error" class="login-error"></p>
+      <p id="login-error" style="color:var(--accent-2); margin-top:12px; display:none;"></p>
     </form>
   </section>
 
-  <div class="app-shell">
+  <div class="app-container">
     
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">s</div>
-        <div>
-          <strong>StockFlow</strong>
-          <span id="user-role-badge">Carregando...</span>
-        </div>
+    <header class="header-top">
+      <div class="brand" style="margin-bottom:0;">
+        <div class="brand-mark" style="width:32px; height:32px; font-size:16px;">s</div>
+        <h2 style="font-size:20px; margin:0;">StockFlow <span style="font-weight:normal; color:var(--muted); font-size:16px;">| Painel</span></h2>
       </div>
-
-      <nav class="nav">
-        <button class="nav-item active" id="nav-home" onclick="switchView('main-view')">Início</button>
-        <button class="nav-item view-admin-only" id="nav-inventory" onclick="switchView('inventory')">Inventário Geral</button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <div class="status-dot"></div>
-          <span id="connected-user-name">Usuário</span>
-        </div>
-        <button class="ghost-action wide" style="margin-top: 12px;" onclick="logout()">Sair</button>
-      </div>
-    </aside>
-
-    <main class="workspace">
       
-      <div class="topbar">
-        <div>
-          <p class="eyebrow" id="eyebrow-text">Painel Operacional</p>
-          <h1 id="view-title">Início</h1>
-        </div>
+      <div class="header-user-zone">
+        <strong id="session-user-name">Carregando...</strong>
+        <span id="session-user-badge" class="role-badge">---</span>
+        <button class="ghost-btn" onclick="logout()">Sair</button>
       </div>
+    </header>
 
-      <div id="role-technician-content" style="display: none;">
-        <div class="flow-layout">
-          <div class="flow-card">
-            <div class="flow-title">
-              <p class="eyebrow">Retirada de Insumo</p>
-              <h2>Escaneie o código ou selecione a ação</h2>
-            </div>
-            
-            <div class="stepper">
-              <div class="step done"></div>
-              <div class="step"></div>
-              <div class="step"></div>
-              <div class="step"></div>
-            </div>
+    <main class="dashboard-grid">
+      
+      <div class="panel">
+        <div class="panel-head">
+          <h2 style="font-size: 22px;">Insumos em Estoque</h2>
+        </div>
 
-            <div class="scan-row" style="margin-bottom: 20px;">
-              <input type="text" id="scan-input-field" class="scan-input" placeholder="Bipar código de barras..." autofocus>
-              <button class="primary-action" onclick="processarBip()">Bipar</button>
-            </div>
-
-            <div class="choice-grid">
-              <button class="choice" onclick="alert('Retirada Normal iniciada')">Retirada Comum</button>
-              <button class="choice" onclick="alert('Devolução iniciada')">Devolver Item</button>
-            </div>
+        <div class="table-container">
+          <div class="table-row-insumos table-headers">
+            <span>Código</span>
+            <span>Nome</span>
+            <span>Categoria</span>
+            <span>Qtd</span>
+            <span>Mín</span>
+            <span>Fornecedor</span>
+          </div>
+          <div id="container-insumos">
+            <div class="no-data">Nenhum insumo carregado.</div>
           </div>
         </div>
       </div>
 
-      <div id="role-admin-content" style="display: none;">
-        
-        <div id="view-main-view" class="view active">
-          <div class="metrics-grid" style="margin-bottom: 20px;">
-            <div class="metric">
-              <span>Total de Insumos</span>
-              <strong id="admin-total-items">0</strong>
-            </div>
-            <div class="metric danger">
-              <span>Abaixo do Mínimo</span>
-              <strong id="admin-critical-items">0</strong>
-            </div>
-          </div>
-
-          <div class="dashboard-grid">
-            <div class="panel">
-              <div class="panel-head">
-                <h2>Insumos em Estoque</h2>
-                <button class="primary-action" onclick="alert('Abrir modal de cadastro')">+ Novo Insumo</button>
-              </div>
-              
-              <div class="compact-list" style="margin-top: 10px;">
-                <div class="table-row" style="font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 8px;">
-                  <span>Código</span>
-                  <span>Nome</span>
-                  <span>Categoria</span>
-                  <span>Qtd</span>
-                </div>
-                <div id="admin-inventory-list">
-                  <p class="muted" style="padding: 20px 0; text-align: center;">Nenhum insumo carregado.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-head">
-                <h2>Solicitações Recentes</h2>
-              </div>
-              <div class="compact-list" style="margin-top: 10px;">
-                <div class="table-row" style="font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 8px;">
-                  <span>Técnico</span>
-                  <span>Item</span>
-                  <span>Qtd</span>
-                </div>
-                <div id="admin-requests-list">
-                  <p class="muted" style="padding: 20px 0; text-align: center;">Nenhuma pendência.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2 style="font-size: 22px;">Solicitações Recentes</h2>
         </div>
 
-        <div id="view-inventory" class="view">
-          <div class="panel">
-            <h2>Inventário Detalhado Completo</h2>
-            <p class="muted" style="margin-top: 10px;">Lista de todos os insumos registrados no banco de dados.</p>
-            <div id="full-inventory-list" style="margin-top: 15px;"></div>
+        <div class="table-container">
+          <div class="table-row-solicitacoes table-headers">
+            <span>Técnico</span>
+            <span>Item</span>
+            <span>Qtd</span>
+          </div>
+          <div id="container-solicitacoes">
+            <div class="no-data">Nenhuma pendência.</div>
           </div>
         </div>
-
       </div>
 
     </main>
   </div>
 
   <script>
-    // Estado fallback para simulação caso o Render apresente falhas
-    let appState = {
-      users: [],
-      items: [
-        { code: "INS-001", name: "Cabo de Rede Cat6", category: "Redes", qty: 45, min: 10 },
-        { code: "INS-002", name: "Conector RJ45", category: "Redes", qty: 120, min: 20 },
-        { code: "INS-003", name: "Fita Isolante", category: "Elétrica", qty: 4, min: 5 }
-      ],
-      requests: []
-    };
+    let dadosDoApp = { items: [], requests: [] };
 
-    // Inicialização da aplicação
-    async function initBootstrap() {
-      const sessionUser = localStorage.getItem("currentUser");
-      if (sessionUser) {
-        setupUserSession(JSON.parse(sessionUser));
-        return;
+    async function checarSessao() {
+      const userSalvo = localStorage.getItem("currentUser");
+      if (userSalvo) {
+        destravarEConfigurar(JSON.parse(userSalvo));
       }
-      await carregarDadosServidor();
     }
 
-    // Busca atualizações do backend de forma segura
-    async function carregarDadosServidor() {
+    async function buscarDadosDoServidor() {
       try {
         const response = await fetch('/api/bootstrap');
         if (response.ok) {
-          appState = await response.json();
-          renderAdminPanel();
+          dadosDoApp = await response.json();
+          atualizarTabelasNaTela();
         }
-      } catch (error) {
-        console.warn("⚠️ Servidor indisponível no momento. Rodando em contingência operacional local.");
+      } catch (err) {
+        console.warn("Servidor indisponível, operando localmente.");
       }
     }
 
-    // Gerenciador de Login Adaptado
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const selectedUser = document.getElementById('login-user').value;
+      const user = document.getElementById('login-user').value;
       const pin = document.getElementById('login-pin').value;
-      const errorEl = document.getElementById('login-error');
-      
-      errorEl.textContent = '';
-      errorEl.style.display = 'none';
+      const errBox = document.getElementById('login-error');
 
       try {
         const response = await fetch('/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: selectedUser, pin })
+          body: JSON.stringify({ name: user, pin })
         });
+        const resultado = await response.json();
 
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Acesso recusado.");
+        if(!response.ok) throw new Error(resultado.error);
 
-        localStorage.setItem("currentUser", JSON.stringify(result.user));
-        setupUserSession(result.user, result.state);
+        localStorage.setItem("currentUser", JSON.stringify(resultado.user));
+        destravarEConfigurar(resultado.user, resultado.state);
 
-      } catch (err) {
-        console.warn("Aplicando contingência para depuração de interface:", err.message);
-        
-        // Mecânica de Contingência Inteligente para os botões e funções não quebrarem
-        const determinadoCargo = selectedUser === "Administrador" ? "admin" : "tech";
-        const mockUser = { name: selectedUser, role: determinadoCargo };
-        
+      } catch (error) {
+        // Fallback local caso o node esteja offline durante seus testes
+        const mockRole = user === "Administrador" ? "admin" : "tech";
+        const mockUser = { name: user, role: mockRole };
         localStorage.setItem("currentUser", JSON.stringify(mockUser));
-        setupUserSession(mockUser);
+        destravarEConfigurar(mockUser);
       }
     });
 
-    // Chaveia as visões e libera as funções baseadas no cargo de forma cirúrgica
-    function setupUserSession(user, freshState) {
-      if (freshState) appState = freshState;
-
-      // 1. Remove a palavra locked e ativa o CSS principal
+    function destravarEConfigurar(user, freshState) {
       document.body.classList.remove('locked');
+      document.getElementById('session-user-name').textContent = user.name;
+      document.getElementById('session-user-badge').textContent = user.role;
 
-      // 2. Preenche as tags de identificação
-      document.getElementById('connected-user-name').textContent = user.name;
-      document.getElementById('user-role-badge').textContent = user.role === 'admin' ? 'ADMIN' : 'TÉCNICO';
-
-      const adminContainer = document.getElementById('role-admin-content');
-      const techContainer = document.getElementById('role-technician-content');
-      const adminNavItems = document.querySelectorAll('.view-admin-only');
-
-      // 3. Monta e redireciona os painéis correspondentes
-      if (user.role === 'admin') {
-        adminContainer.style.display = 'block';
-        techContainer.style.display = 'none';
-        adminNavItems.forEach(item => item.style.display = 'block');
-        
-        document.getElementById('view-title').textContent = "Painel Administrador";
-        alert("Bem-vindo, Administrador!");
-        
-        renderAdminPanel();
-        carregarDadosServidor();
+      if (freshState) {
+        dadosDoApp = freshState;
+        atualizarTabelasNaTela();
       } else {
-        adminContainer.style.display = 'none';
-        techContainer.style.display = 'block';
-        adminNavItems.forEach(item => item.style.display = 'none');
-        
-        document.getElementById('view-title').textContent = "Área Técnica";
-        alert(`Bem-vindo, Técnico Operacional!`);
+        buscarDadosDoServidor();
       }
     }
 
-    // Popula as tabelas do Admin respeitando a estrutura horizontal exata do CSS
-    function renderAdminPanel() {
-      if (!appState.items) return;
-      
-      document.getElementById('admin-total-items').textContent = appState.items.length;
-      const critical = appState.items.filter(i => i.qty <= (i.min || 0)).length;
-      document.getElementById('admin-critical-items').textContent = critical;
-
-      const list = document.getElementById('admin-inventory-list');
-      if (list) {
-        list.innerHTML = '';
-        appState.items.forEach(item => {
+    function atualizarTabelasNaTela() {
+      // 1. Atualiza Tabela de Insumos (6 colunas)
+      const boxInsumos = document.getElementById('container-insumos');
+      if (dadosDoApp.items && dadosDoApp.items.length > 0) {
+        boxInsumos.innerHTML = '';
+        dadosDoApp.items.forEach(item => {
           const div = document.createElement('div');
-          div.className = 'table-row';
+          div.className = 'table-row-insumos';
           div.innerHTML = `
-            <span class="muted">${item.code || '---'}</span>
+            <span style="color: var(--muted);">${item.code || '---'}</span>
             <strong>${item.name}</strong>
             <span>${item.category || 'Geral'}</span>
-            <span style="font-weight:700; color: ${item.qty <= (item.min || 0) ? 'var(--red)' : 'inherit'}">${item.qty} un</span>
+            <span style="font-weight:bold;">${item.qty}</span>
+            <span>${item.min || '0'}</span>
+            <span>${item.provider || '---'}</span>
           `;
-          list.appendChild(div);
+          boxInsumos.appendChild(div);
         });
       }
-    }
 
-    // Executa a leitura simulada do scanner na visão do técnico
-    function processarBip() {
-      const input = document.getElementById('scan-input-field');
-      if (input.value.trim() !== "") {
-        alert(`Código Bipado com sucesso: ${input.value}`);
-        input.value = '';
-      } else {
-        alert("Insira ou bipe um código válido.");
-      }
-    }
-
-    // Chaveador de Abas Internas para o Painel Administrativo
-    function switchView(viewId) {
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      
-      const targetView = document.getElementById(`view-${viewId}`);
-      if (targetView) targetView.classList.add('active');
-      
-      const activeBtn = viewId === 'main-view' ? document.getElementById('nav-home') : document.getElementById('nav-inventory');
-      if (activeBtn) activeBtn.classList.add('active');
-    }
-
-    // Desconecta e redefine o estado inicial travado
-    function logout() {
-      localStorage.removeItem("currentUser");
-      document.body.classList.add('locked');
-      window.location.reload();
-    }
-
-    document.addEventListener('DOMContentLoaded', initBootstrap);
-  </script>
-</body>
-</html>  <div class="app-shell">
-    
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">S</div>
-        <div>
-          <strong>StockFlow</strong>
-          <span id="user-role-badge">Carregando...</span>
-        </div>
-      </div>
-
-      <nav class="nav">
-        <button class="nav-item active" onclick="switchView('main-view')">Início</button>
-        <button class="nav-item view-admin-only" onclick="switchView('inventory')">Inventário Geral</button>
-        <button class="nav-item view-admin-only" onclick="switchView('history')">Histórico de Retiradas</button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <div class="status-dot"></div>
-          <span id="connected-user-name">Usuário</span>
-        </div>
-        <button class="ghost-action wide" style="margin-top: 12px;" onclick="logout()">Sair</button>
-      </div>
-    </aside>
-
-    <main class="workspace">
-      
-      <div class="topbar">
-        <div>
-          <p class="eyebrow">Painel Operacional</p>
-          <h1 id="view-title">Início</h1>
-        </div>
-      </div>
-
-      <div id="role-technician-content" style="display: none;">
-        <div class="flow-layout">
-          <div class="flow-card">
-            <div class="flow-title">
-              <p class="eyebrow">Retirada de Insumo</p>
-              <h2>Escaneie o código ou selecione a ação</h2>
-            </div>
-            
-            <div class="stepper">
-              <div class="step done"></div>
-              <div class="step"></div>
-              <div class="step"></div>
-              <div class="step"></div>
-            </div>
-
-            <div class="scan-row" style="margin-bottom: 20px;">
-              <input type="text" class="scan-input" placeholder="Bipar código de barras..." autofocus>
-              <button class="primary-action">Bipar</button>
-            </div>
-
-            <div class="choice-grid">
-              <button class="choice" onclick="alert('Retirada Normal iniciada')">Retirada Comum</button>
-              <button class="choice" onclick="alert('Devolução iniciada')">Devolver Item</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="role-admin-content" style="display: none;">
-        
-        <div id="view-main-view" class="view active">
-          <div class="metrics-grid" style="margin-bottom: 20px;">
-            <div class="metric">
-              <span>Total de Insumos</span>
-              <strong id="admin-total-items">0</strong>
-            </div>
-            <div class="metric danger">
-              <span>Abaixo do Mínimo</span>
-              <strong id="admin-critical-items">0</strong>
-            </div>
-          </div>
-
-          <div class="dashboard-grid">
-            <div class="panel">
-              <div class="panel-head">
-                <h2>Gerenciamento de Inventário</h2>
-                <button class="primary-action" onclick="alert('Abrir modal de cadastro')">+ Novo Insumo</button>
-              </div>
-              
-              <div class="compact-list" id="admin-inventory-list">
-                </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-head">
-                <h2>Aprovações Pendentes</h2>
-              </div>
-              <div class="request-list" id="admin-requests-list">
-                </div>
-            </div>
-          </div>
-        </div>
-
-        <div id="view-inventory" class="view">
-          <div class="panel">
-            <h2>Lista Completa de Itens</h2>
-            </div>
-        </div>
-
-      </div>
-
-    </main>
-  </div>
-
-  <script>
-    let appState = { users: [], items: [], requests: [] };
-
-    async function initBootstrap() {
-      const sessionUser = localStorage.getItem("currentUser");
-      if (sessionUser) {
-        setupUserSession(JSON.parse(sessionUser));
-        return;
-      }
-      try {
-        const response = await fetch('/api/bootstrap');
-        if (response.ok) appState = await response.json();
-      } catch (error) {
-        console.warn("⚠️ Modo contingência ativo.");
-      }
-    }
-
-    // Processamento do Formulário de Login
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('login-user').value;
-      const pin = document.getElementById('login-pin').value;
-      const errorEl = document.getElementById('login-error');
-      
-      errorEl.textContent = '';
-      errorEl.style.display = 'none';
-
-      try {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, pin })
-        });
-
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Acesso recusado.");
-
-        localStorage.setItem("currentUser", JSON.stringify(result.user));
-        
-        // Destrava a tela aplicando as regras de visualização separada!
-        setupUserSession(result.user, result.state);
-
-      } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.style.display = 'block';
-      }
-    });
-
-    // SISTEMA DE SEPARAÇÃO VISUAL DE CARGOS (ADMIN vs TÉCNICO)
-    function setupUserSession(user, freshState) {
-      if (freshState) appState = freshState;
-
-      // 1. Destrava a tela ocultando a tela de login via CSS
-      document.body.classList.remove('locked');
-
-      // 2. Preenche os dados de perfil na barra lateral
-      document.getElementById('connected-user-name').textContent = user.name;
-      document.getElementById('user-role-badge').textContent = user.role.toUpperCase();
-
-      // 3. SEPARAÇÃO CIRÚRGICA DE INTERFACES:
-      const adminContainer = document.getElementById('role-admin-content');
-      const techContainer = document.getElementById('role-technician-content');
-      const adminNavItems = document.querySelectorAll('.view-admin-only');
-
-      if (user.role === 'admin') {
-        // Mostra o ecossistema do Admin e esconde o do Técnico
-        adminContainer.style.display = 'block';
-        techContainer.style.display = 'none';
-        adminNavItems.forEach(item => item.style.display = 'block');
-        document.getElementById('view-title').textContent = "Painel Administrador";
-      } else {
-        // Mostra o ecossistema do Técnico (Fluxos, bips, scanner) e esconde o do Admin
-        adminContainer.style.display = 'none';
-        techContainer.style.display = 'block';
-        adminNavItems.forEach(item => item.style.display = 'none');
-        document.getElementById('view-title').textContent = "Área Técnica";
-      }
-
-      // Dispara a carga das tabelas caso existam dados
-      fetch('/api/bootstrap')
-        .then(res => res.json())
-        .then(data => {
-          appState = data;
-          renderAdminPanel();
-        }).catch(err => console.log("Aguardando sincronismo..."));
-    }
-
-    // Preenche as informações na parte do admin
-    function renderAdminPanel() {
-      if (!appState.items) return;
-      
-      document.getElementById('admin-total-items').textContent = appState.items.length;
-      const critical = appState.items.filter(i => i.qty <= (i.min || 0)).length;
-      document.getElementById('admin-critical-items').textContent = critical;
-
-      const list = document.getElementById('admin-inventory-list');
-      if (list) {
-        list.innerHTML = '';
-        appState.items.forEach(item => {
-          const isCritical = item.qty <= (item.min || 0);
+      // 2. Atualiza Tabela de Solicitações (3 colunas)
+      const boxSolicitacoes = document.getElementById('container-solicitacoes');
+      if (dadosDoApp.requests && dadosDoApp.requests.length > 0) {
+        boxSolicitacoes.innerHTML = '';
+        dadosDoApp.requests.forEach(req => {
           const div = document.createElement('div');
-          div.className = 'compact-row';
+          div.className = 'table-row-solicitacoes';
           div.innerHTML = `
-            <strong>${item.name}</strong>
-            <span class="muted">${item.code}</span>
-            <span style="font-weight:700;">${item.qty} un</span>
-            <span class="pill ${isCritical ? 'critical' : ''}">${isCritical ? 'Crítico' : 'Ok'}</span>
+            <span>${req.techName || 'Técnico'}</span>
+            <strong>${req.itemName}</strong>
+            <span>${req.qty} un</span>
           `;
-          list.appendChild(div);
+          boxSolicitacoes.appendChild(div);
         });
       }
-    }
-
-    // Chaveador de abas internas para o administrador
-    function switchView(viewId) {
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      const targetView = document.getElementById(`view-${viewId}`);
-      if (targetView) targetView.classList.add('active');
     }
 
     function logout() {
@@ -567,7 +200,7 @@
       window.location.reload();
     }
 
-    document.addEventListener('DOMContentLoaded', initBootstrap);
+    document.addEventListener('DOMContentLoaded', checarSessao);
   </script>
 </body>
 </html>
