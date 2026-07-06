@@ -40,13 +40,13 @@ async function loadBootstrap() {
 function filteredItems() {
   const query = normalize($("#global-search").value);
   if (!query) return state.data.items;
-  return state.data.items.filter((item) => [item.code, item.name, item.category, item.supplier, item.note].some((value) => normalize(value).includes(query)));
+  return state.data.items.filter((item) => [item.code, item.name, item.category, item.supplier, item.note].some((value) => normalize(value || "").includes(query)));
 }
 
 function filteredHistory() {
   const query = normalize($("#global-search").value);
   if (!query) return state.data.history;
-  return state.data.history.filter((entry) => [entry.user, entry.type, entry.itemName, entry.itemCode, entry.destination].some((value) => normalize(value).includes(query)));
+  return state.data.history.filter((entry) => [entry.user, entry.type, entry.itemName, entry.itemCode, entry.destination].some((value) => normalize(value || "").includes(query)));
 }
 
 function statusFor(item) {
@@ -62,13 +62,13 @@ function productForm(item = {}) {
       <button type="button" class="icon-button" data-close>×</button>
     </div>
     <div class="form-grid">
-      <label>Codigo<input name="code" required value="${escapeHtml(item.code)}"></label>
-      <label>Nome<input name="name" required value="${escapeHtml(item.name)}"></label>
-      <label>Categoria<input name="category" required value="${escapeHtml(item.category)}"></label>
+      <label>Codigo<input name="code" required value="${escapeHtml(item.code || "")}"></label>
+      <label>Nome<input name="name" required value="${escapeHtml(item.name || "")}"></label>
+      <label>Categoria<input name="category" required value="${escapeHtml(item.category || "")}"></label>
       <label>Quantidade atual<input name="qty" type="number" min="0" required value="${item.qty ?? 0}"></label>
       <label>Quantidade minima<input name="min" type="number" min="0" required value="${item.min ?? 1}"></label>
-      <label>Fornecedor<input name="supplier" value="${escapeHtml(item.supplier)}"></label>
-      <label class="span-2">Observacao<input name="note" value="${escapeHtml(item.note)}"></label>
+      <label>Fornecedor<input name="supplier" value="${escapeHtml(item.supplier || "")}"></label>
+      <label class="span-2">Observacao<input name="note" value="${escapeHtml(item.note || "")}"></label>
     </div>
     <button class="primary-action wide">Salvar produto</button>
   `;
@@ -199,8 +199,8 @@ async function handleWithdraw() {
       quantity: Number($("#withdraw-qty").value || 1)
     })
   });
-  $("#withdraw-result").textContent = "Solicitacao enviada para liberacao.";
   await refresh();
+  $("#withdraw-result").textContent = "Solicitacao enviada para liberacao.";
 }
 
 async function handleReplenish() {
@@ -208,8 +208,8 @@ async function handleReplenish() {
     method: "POST",
     body: JSON.stringify({ code: $("#replenish-code").value, quantity: Number($("#replenish-qty").value || 1) })
   });
-  $("#replenish-result").textContent = "Entrada registrada.";
   await refresh();
+  $("#replenish-result").textContent = "Entrada registrada.";
   toast("Estoque atualizado.");
 }
 
