@@ -164,16 +164,16 @@ async function getBootstrap() {
     let usageKpis = [];
     try {
       const kpisRes = await client.query(`
-        SELECT item_code as "itemCode", item_name as "itemName", user_name as technician,
-               CEIL(AVG(days_step))::INT as "averageDays"
+        SELECT sub.item_code as "itemCode", sub.item_name as "itemName", sub.user_name as technician,
+               CEIL(AVG(sub.days_step))::INT as "averageDays"
         FROM (
           SELECT item_code, item_name, user_name,
                  EXTRACT(DAY FROM (at - LAG(at) OVER (PARTITION BY item_code, user_name ORDER BY at ASC))) as days_step
           FROM stock_history
           WHERE type = 'Retirada'
         ) sub
-        WHERE days_step IS NOT NULL AND days_step > 0
-        GROUP BY item_code, item_name, user_name
+        WHERE sub.days_step IS NOT NULL AND sub.days_step > 0
+        GROUP BY sub.item_code, sub.item_name, sub.user_name
         ORDER BY "averageDays" ASC
       `);
       usageKpis = kpisRes.rows;
