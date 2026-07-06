@@ -39,14 +39,22 @@ async function loadBootstrap() {
 
 function filteredItems() {
   const query = normalize($("#global-search").value);
-  if (!query) return state.data.items;
-  return state.data.items.filter((item) => [item.code, item.name, item.category, item.supplier, item.note].some((value) => normalize(value || "").includes(query)));
+  if (!query) return state.data.items || [];
+  return (state.data.items || []).filter((item) => 
+    [item.code, item.name, item.category, item.supplier, item.note].some((value) => 
+      normalize(value || "").includes(query)
+    )
+  );
 }
 
 function filteredHistory() {
   const query = normalize($("#global-search").value);
-  if (!query) return state.data.history;
-  return state.data.history.filter((entry) => [entry.user, entry.type, entry.itemName, entry.itemCode, entry.destination].some((value) => normalize(value || "").includes(query)));
+  if (!query) return state.data.history || [];
+  return (state.data.history || []).filter((entry) => 
+    [entry.user, entry.type, entry.itemName, entry.itemCode, entry.destination].some((value) => 
+      normalize(value || "").includes(query)
+    )
+  );
 }
 
 function statusFor(item) {
@@ -87,9 +95,9 @@ function renderProdutos() {
         <div class="table-head"><span>Produto</span><span>Codigo</span><span>Categoria</span><span>Estoque</span><span>Status</span><span>Acoes</span></div>
         ${items.map((item) => `
           <div class="table-row">
-            <strong>${escapeHtml(item.name)}</strong>
-            <span>${escapeHtml(item.code)}</span>
-            <span>${escapeHtml(item.category)}</span>
+            <strong>${escapeHtml(item.name || "")}</strong>
+            <span>${escapeHtml(item.code || "")}</span>
+            <span>${escapeHtml(item.category || "")}</span>
             <span>${item.qty}/${item.min}</span>
             ${statusFor(item)}
             <span class="actions">
@@ -114,7 +122,7 @@ function openProduct(item = null) {
   openModal(productForm(item || {}), async (form) => {
     await apiRequest("/items", { method: "POST", body: JSON.stringify(Object.fromEntries(form.entries())) });
     await refresh();
-    toast("Produto saved.");
+    toast("Produto salvo.");
   });
 }
 
@@ -134,17 +142,20 @@ function renderEntradas() {
 }
 
 function renderSaidas() {
+  const technicians = state.data.technicians || [];
+  const destinations = state.data.destinations || [];
+
   $("#saidas-view").innerHTML = `
     <section class="panel flow-card">
       <div class="panel-head"><h3>Saida de estoque</h3><span class="muted">Tecnico solicita, admin libera</span></div>
       <div class="form-grid">
         <label>Tecnico
           <select id="withdraw-technician">
-            ${state.data.technicians.map((name) => `<option value="${name}" ${name === state.user.name ? "selected" : ""}>${name}</option>`).join("")}
+            ${technicians.map((name) => `<option value="${name}" ${name === state.user?.name ? "selected" : ""}>${name}</option>`).join("")}
           </select>
         </label>
         <label>Destino
-          <select id="withdraw-destination">${state.data.destinations.map((name) => `<option>${name}</option>`).join("")}</select>
+          <select id="withdraw-destination">${destinations.map((name) => `<option>${name}</option>`).join("")}</select>
         </label>
         <label>Codigo<input id="withdraw-code" placeholder="Bipe ou digite"></label>
         <label>Quantidade<input id="withdraw-qty" type="number" min="1" value="1"></label>
@@ -159,7 +170,7 @@ function renderSaidas() {
 }
 
 function renderPendingRequests() {
-  const pending = state.data.requests.filter((request) => request.status === "pending");
+  const pending = (state.data.requests || []).filter((request) => request.status === "pending");
   return `
     <section class="panel" style="margin-top: 14px">
       <div class="panel-head"><h3>Solicitacoes pendentes</h3><span class="pill warning">${pending.length}</span></div>
@@ -167,11 +178,11 @@ function renderPendingRequests() {
         <div class="table-head"><span>Tecnico</span><span>Produto</span><span>Destino</span><span>Qtd</span><span>Codigo</span><span>Acoes</span></div>
         ${pending.map((request) => `
           <div class="table-row">
-            <strong>${escapeHtml(request.technician)}</strong>
-            <span>${escapeHtml(request.itemName)}</span>
-            <span>${escapeHtml(request.destination)}</span>
+            <strong>${escapeHtml(request.technician || "")}</strong>
+            <span>${escapeHtml(request.itemName || "")}</span>
+            <span>${escapeHtml(request.destination || "")}</span>
             <span>${request.qty}</span>
-            <input data-scan="${request.id}" placeholder="${request.itemCode}">
+            <input data-scan="${request.id}" placeholder="${request.itemCode || ""}">
             <button class="primary-action" data-approve="${request.id}">Liberar</button>
           </div>
         `).join("") || `<div class="table-row"><span class="muted">Nenhuma solicitacao pendente.</span></div>`}
@@ -200,7 +211,8 @@ async function handleWithdraw() {
     })
   });
   await refresh();
-  $("#withdraw-result").textContent = "Solicitacao enviada para liberacao.";
+  const el = $("#withdraw-result");
+  if (el) el.textContent = "Solicitacao enviada para liberacao.";
 }
 
 async function handleReplenish() {
@@ -209,7 +221,8 @@ async function handleReplenish() {
     body: JSON.stringify({ code: $("#replenish-code").value, quantity: Number($("#replenish-qty").value || 1) })
   });
   await refresh();
-  $("#replenish-result").textContent = "Entrada registrada.";
+  const el = $("#replenish-result");
+  if (el) el.textContent = "Entrada registrada.";
   toast("Estoque atualizado.");
 }
 
@@ -220,7 +233,15 @@ function renderHistorico() {
       <div class="panel-head"><h3>Historico</h3><span class="muted">${rows.length} registros</span></div>
       <div class="table" style="--cols: 5">
         <div class="table-head"><span>Produto</span><span>Usuario</span><span>Tipo</span><span>Destino</span><span>Data</span></div>
-        ${rows.map((entry) => `<div class="table-row"><strong>${escapeHtml(entry.itemName)}</strong><span>${escapeHtml(entry.user)}</span><span>${escapeHtml(entry.type)}</span><span>${escapeHtml(entry.destination)}</span><span>${formatDate(entry.at)}</span></div>`).join("") || `<div class="table-row"><span class="muted">Sem movimentacoes.</span></div>`}
+        ${rows.map((entry) => `
+          <div class="table-row">
+            <strong>${escapeHtml(entry.itemName || "")}</strong>
+            <span>${escapeHtml(entry.user || "")}</span>
+            <span>${escapeHtml(entry.type || "")}</span>
+            <span>${escapeHtml(entry.destination || "")}</span>
+            <span>${formatDate(entry.at)}</span>
+          </div>
+        `).join("") || `<div class="table-row"><span class="muted">Sem movimentacoes.</span></div>`}
       </div>
     </section>
   `;
