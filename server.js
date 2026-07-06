@@ -44,11 +44,11 @@ async function initDatabase() {
   try {
     await client.query("BEGIN");
 
-    // Criação das tabelas base caso não existam
+    // Criação das tabelas base (CORRIGIDO: Removido o 'NOT EXISTS' inválido do tipo da coluna)
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_users (
         name TEXT PRIMARY KEY,
-        role TEXT NOT EXISTS,
+        role TEXT NOT NULL,
         pin_code TEXT,
         active BOOLEAN DEFAULT TRUE
       );
@@ -95,7 +95,7 @@ async function initDatabase() {
     }
 
     await client.query("COMMIT");
-    console.log("Banco de dados sincronizado (Sem Gabriel).");
+    console.log("Banco de dados sincronizado perfeitamente (Sem Gabriel).");
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Erro ao inicializar tabelas:", err);
@@ -128,7 +128,7 @@ async function getBootstrap() {
     const destsRes = await client.query("SELECT name FROM destinations ORDER BY name ASC");
     const destinations = destsRes.rows.map(d => d.name);
 
-    // CORREÇÃO DA QUERY DO KPI (Mudado para IS NOT NULL)
+    // CORREÇÃO DA QUERY DO KPI (Ajustado filtros de nulidade)
     const kpisRes = await client.query(`
       SELECT item_code as "itemCode", item_name as "itemName", user_name as technician,
              CEIL(AVG(days_step))::INT as "averageDays"
