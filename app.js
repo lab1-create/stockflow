@@ -67,7 +67,7 @@ async function enterApp(user, initialState = null) {
   state.user = user;
   state.data = initialState || await apiRequest("/bootstrap");
   
-  // Atualiza classes do body para refletir o cargo dinamicamente no CSS
+  // Sincroniza o estado do técnico com a regra de ocultação do CSS
   document.body.classList.remove("locked", "is-tech");
   if (!isAdmin()) {
     document.body.classList.add("is-tech");
