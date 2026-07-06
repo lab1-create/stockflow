@@ -29,28 +29,27 @@ const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "0.0.0.0";
 const databaseUrl = process.env.DATABASE_URL;
 const databaseSsl = process.env.DATABASE_SSL === "true" || /sslmode=require/i.test(databaseUrl || "");
-const jwtSecret = process.env.JWT_SECRET || "stockflow-dev-secret-change-me";
+const jwtSecret = process.env.JWT_SECRET || "fallback-secret-dev";
 
 const pool = new Pool({
   connectionString: databaseUrl,
-  ssl: databaseSsl ? { rejectUnauthorized: false } : undefined
+  ssl: databaseSsl ? { rejectUnauthorized: false } : false
 });
 
 const realtimeService = new RealtimeService();
-const relatorioService = new RelatorioService(pool);
-const usuarioService = new UsuarioService(pool);
-const produtoService = new ProdutoService(pool, relatorioService);
-const estoqueService = new EstoqueService(pool, relatorioService);
 const authService = new AuthService(pool, jwtSecret);
+const usuarioService = new UsuarioService(pool);
+const produtoService = new ProdutoService(pool);
+const estoqueService = new EstoqueService(pool);
+const relatorioService = new RelatorioService(pool);
 
-const authController = new AuthController(authService, relatorioService);
+const authController = new AuthController(authService);
 const usuarioController = new UsuarioController(usuarioService);
 const produtoController = new ProdutoController(produtoService, realtimeService);
 const estoqueController = new EstoqueController(estoqueService, relatorioService, realtimeService);
-const requireAuth = authMiddleware(jwtSecret);
 
 app.disable("x-powered-by");
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
@@ -65,8 +64,8 @@ app.get("/api/health", async (_req, res, next) => {
   }
 });
 
-app.use("/api", createAuthRoutes(authController, requireAuth));
-app.use("/api", requireAuth);
+app.use("/api", createAuthRoutes(authController));
+app.use("/api", authMiddleware(jwtSecret));
 app.use("/api/usuarios", createUsuariosRoutes(usuarioController));
 app.use("/api/produtos", createProdutosRoutes(produtoController));
 app.use("/api/items", createProdutosRoutes(produtoController));
@@ -85,8 +84,5 @@ app.use((error, _req, res, _next) => {
 });
 
 app.listen(port, host, () => {
-  const computerName = os.hostname();
-  console.log("StockFlow rodando.");
-  console.log(`Nesta maquina: http://localhost:${port}`);
-  console.log(`Na rede, sem IP: http://${computerName}:${port}`);
+  console.log(`Servidor rodando em http://${host}:${port}`);
 });
