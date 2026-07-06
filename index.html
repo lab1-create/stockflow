@@ -3,404 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StockFlow - Gestão de Estoque</title>
-  <style>
-    :root {
-      --bg-color: #121214;
-      --card-bg: #1a1a1e;
-      --text-color: #ffffff;
-      --text-secondary: #a8a8b3;
-      --primary-color: #e51e3d;
-      --primary-hover: #c21330;
-      --input-bg: #202024;
-      --border-color: #29292e;
-      --success-color: #04d361;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    /* CONTAINER DE LOGIN */
-    .login-container {
-      background-color: var(--card-bg);
-      padding: 2.5rem;
-      border-radius: 8px;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border-color);
-    }
-
-    .header-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 2rem;
-    }
-
-    .logo-box {
-      background-color: var(--primary-color);
-      color: white;
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-weight: bold;
-      font-size: 1.4rem;
-    }
-
-    .header-text h1 {
-      font-size: 1.1rem;
-      font-weight: 700;
-    }
-
-    .header-text p {
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-
-    .title-section {
-      margin-bottom: 1.5rem;
-    }
-
-    .title-section p {
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      margin-bottom: 0.3rem;
-    }
-
-    .title-section h2 {
-      font-size: 1.8rem;
-      font-weight: 700;
-    }
-
-    .form-group {
-      margin-bottom: 1.25rem;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.9rem;
-      color: var(--text-secondary);
-      margin-bottom: 0.5rem;
-    }
-
-    select, input {
-      width: 100%;
-      padding: 0.85rem;
-      background-color: var(--input-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      color: var(--text-color);
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    select:focus, input:focus {
-      border-color: var(--primary-color);
-    }
-
-    select {
-      appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8a8b3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat;
-      background-position: right 1rem center;
-      background-size: 1em;
-    }
-
-    .btn-submit {
-      width: 100%;
-      padding: 1rem;
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      margin-top: 0.5rem;
-    }
-
-    .btn-submit:hover {
-      background-color: var(--primary-hover);
-    }
-
-    .error-msg {
-      color: #ff3333;
-      font-size: 0.85rem;
-      margin-top: 0.5rem;
-      display: none;
-    }
-
-    /* CONTAINER DO PAINEL PRINCIPAL (ESCONDIDO POR PADRÃO) */
-    #dashboard-container {
-      display: none;
-      width: 100%;
-      max-width: 1200px;
-      padding: 2rem;
-      align-self: flex-start;
-    }
-
-    .nav-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border-color);
-      margin-bottom: 2rem;
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .badge-role {
-      background-color: #29292e;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      color: var(--primary-color);
-      font-weight: bold;
-    }
-
-    .btn-logout {
-      background: transparent;
-      border: 1px solid var(--border-color);
-      color: var(--text-secondary);
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .btn-logout:hover {
-      border-color: var(--primary-color);
-      color: white;
-    }
-
-    .grid-dashboard {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-
-    @media (min-width: 768px) {
-      .grid-dashboard {
-        grid-template-columns: 2fr 1fr;
-      }
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 1.5rem;
-    }
-
-    .card h3 {
-      margin-bottom: 1rem;
-      font-size: 1.2rem;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 0.5rem;
-    }
-
-    /* TABELAS SIMPLES PARA ITENS E HISTÓRICO */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 0.5rem;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 0.75rem;
-      border-bottom: 1px solid var(--border-color);
-      font-size: 0.9rem;
-    }
-
-    th {
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-  </style>
+  <title>StockFlow - Painel Operacional</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="locked">
 
-  <div id="login-screen" class="login-container">
-    <div class="header-logo">
-      <div class="logo-box">s</div>
-      <div class="header-text">
-        <h1>StockFlow</h1>
-        <p>Acesso operacional</p>
+  <section id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark">S</div>
+        <div>
+          <strong>StockFlow</strong>
+          <span>Acesso operacional</span>
+        </div>
       </div>
-    </div>
-
-    <div class="title-section">
-      <p>Entrar</p>
-      <h2>Selecione seu usuário</h2>
-    </div>
-
-    <form id="login-form">
-      <div class="form-group">
-        <label for="user-select">Usuário</label>
-        <select id="user-select" required>
-          <option value="" disabled selected>Carregando usuários...</option>
-        </select>
+      <div class="flow-title">
+        <p class="eyebrow">Entrar</p>
+        <h2>Acesse sua conta</h2>
       </div>
-
-      <div class="form-group">
-        <label for="pin-input">PIN</label>
-        <input type="password" id="pin-input" placeholder="0000" maxlength="10" required />
-      </div>
-
-      <div id="error-message" class="error-msg"></div>
-
-      <button type="submit" class="btn-submit">Entrar</button>
+      <label>
+        Usuário
+        <input id="login-user" type="text" placeholder="Digite seu usuário" required>
+      </label>
+      <label>
+        Senha
+        <input id="login-pin" type="password" placeholder="Digite sua senha" required>
+      </label>
+      <button type="submit" class="primary-action wide">Entrar</button>
+      <p id="login-error" class="login-error"></p>
     </form>
-  </div>
+  </section>
 
-  <div id="dashboard-container">
-    <div class="nav-bar">
-      <div class="user-info">
-        <div class="logo-box" style="width:32px; height:32px; font-size:1rem;">s</div>
-        <h2>StockFlow <span style="font-weight: 300; font-size: 1.2rem;">| Painel</span></h2>
-      </div>
-      <div class="user-info">
-        <span id="nav-user-name" style="font-weight: 600;">---</span>
-        <span id="nav-user-role" class="badge-role">---</span>
-        <button class="btn-logout" onclick="logout()">Sair</button>
-      </div>
-    </div>
-
-    <div class="grid-dashboard">
-      <div class="card">
-        <h3>Insumos em Estoque</h3>
-        <div style="overflow-x: auto;">
-          <table id="items-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Nome</th>
-                <th>Categoria</th>
-                <th>Qtd</th>
-                <th>Mín</th>
-                <th>Fornecedor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colspan="6" style="text-align:center; color:var(--text-secondary);">Nenhum insumo carregado.</td>
-              </tr>
-            </tbody>
-          </table>
+  <div class="app-shell">
+    
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div>
+          <strong>StockFlow</strong>
+          <span id="user-role-badge">Operacional</span>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Solicitações Recentes</h3>
-        <table id="requests-table">
-          <thead>
-            <tr>
-              <th>Técnico</th>
-              <th>Item</th>
-              <th>Qtd</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="3" style="text-align:center; color:var(--text-secondary);">Nenhuma pendência.</td>
-            </tr>
-          </tbody>
-        </table>
+      <nav class="nav">
+        <button class="nav-item active" onclick="switchView('dashboard')">Dashboard</button>
+        <button class="nav-item" onclick="switchView('items')">Estoque de Insumos</button>
+        <button class="nav-item" onclick="switchView('requests')">Solicitações</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="status-dot"></div>
+          <span id="connected-user-name">Usuário</span>
+        </div>
+        <button class="ghost-action wide" style="margin-top: 10px;" onclick="logout()">Sair do Sistema</button>
       </div>
-    </div>
+    </aside>
+
+    <main class="workspace">
+      
+      <div class="topbar">
+        <div>
+          <p class="eyebrow">Visão Geral</p>
+          <h1 id="view-title">Dashboard</h1>
+        </div>
+        <div class="search">
+          Pesquisar no sistema
+          <input type="text" placeholder="Buscar insumos, códigos ou técnicos...">
+        </div>
+      </div>
+
+      <div id="view-dashboard" class="view active">
+        <div class="metrics-grid">
+          <div class="metric">
+            <span>Total de Itens</span>
+            <strong id="metric-total-items">0</strong>
+          </div>
+          <div class="metric danger">
+            <span>Itens Críticos</span>
+            <strong id="metric-critical-items">0</strong>
+          </div>
+          <div class="metric success">
+            <span>Solicitações Concluídas</span>
+            <strong id="metric-completed">0</strong>
+          </div>
+          <div class="metric">
+            <span>Pendentes</span>
+            <strong id="metric-pending">0</strong>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Fluxo de Consumo Recente</h2>
+            </div>
+            <div class="compact-list" id="dashboard-items-preview">
+              </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Atividades de Técnicos</h2>
+            </div>
+            <div class="request-list" id="dashboard-requests-preview">
+              </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-items" class="view">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Inventário Completo</h2>
+            <button class="primary-action" id="admin-add-btn" style="display: none;">+ Cadastrar Insumo</button>
+          </div>
+          <div id="inventory-list" class="compact-list" style="margin-top: 15px;">
+            </div>
+        </div>
+      </div>
+
+      <div id="view-requests" class="view">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Pedidos de Liberação</h2>
+          </div>
+          <div class="request-list" id="requests-full-list" style="margin-top: 15px;">
+            </div>
+        </div>
+      </div>
+
+    </main>
   </div>
 
   <script>
+    // Estado interno da aplicação
     let appState = {
       users: [],
       items: [],
-      requests: [],
-      history: []
+      requests: []
     };
 
-    // Função executada ao carregar a página
+    // 1. Executa assim que a página é carregada
     async function initBootstrap() {
-      // Se o usuário já tiver uma sessão válida salva no navegador, pula a tela de login
-      const savedUser = localStorage.getItem("currentUser");
-      if (savedUser) {
-        const user = JSON.parse(savedUser);
-        showDashboard(user);
+      // Se o usuário já tiver uma sessão ativa salva no navegador, pula a tela de login automaticamente
+      const sessionUser = localStorage.getItem("currentUser");
+      if (sessionUser) {
+        setupUserSession(JSON.parse(sessionUser));
         return;
       }
 
       try {
         const response = await fetch('/api/bootstrap');
-        if (!response.ok) throw new Error("Erro na resposta do servidor");
-        
-        const data = await response.json();
-        appState.users = data.users || [];
-        renderUsers(appState.users);
+        if (response.ok) {
+          appState = await response.json();
+          console.log("Banco de dados sincronizado.");
+        }
       } catch (error) {
-        console.warn("⚠️ Servidor inacessível, carregando contingência local de usuários.", error.message);
-        
-        const fallbackUsers = [
-          { name: "Administrador", role: "admin" },
-          { name: "Luiz", role: "tecnico" },
-          { name: "Bruno", role: "tecnico" },
-          { name: "Joao", role: "tecnico" },
-          { name: "Placo", role: "tecnico" },
-          { name: "Kaique", role: "tecnico" },
-          { name: "Cauã", role: "tecnico" }
-        ];
-        
-        appState.users = fallbackUsers;
-        renderUsers(fallbackUsers);
+        console.warn("⚠️ Operando em modo offline/contingência.", error.message);
       }
     }
 
-    // Alimenta o Select do formulário
-    function renderUsers(usersList) {
-      const selectElement = document.getElementById('user-select');
-      if (!selectElement) return;
-
-      selectElement.innerHTML = '<option value="" disabled selected>Selecione seu usuário</option>';
-      usersList.forEach(user => {
-        const option = document.createElement('option');
-        option.value = user.name;
-        option.textContent = user.name;
-        selectElement.appendChild(option);
-      });
-    }
-
-    // Formulário de envio de Login
+    // 2. Processa o Login usando os seletores originais
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      const name = document.getElementById('user-select').value;
-      const pin = document.getElementById('pin-input').value;
-      const errorDiv = document.getElementById('error-message');
+      const name = document.getElementById('login-user').value;
+      const pin = document.getElementById('login-pin').value;
+      const errorEl = document.getElementById('login-error');
       
-      errorDiv.style.display = 'none';
+      errorEl.textContent = '';
+      errorEl.style.display = 'none';
 
       try {
         const response = await fetch('/api/login', {
@@ -412,83 +185,119 @@
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || "Falha ao efetuar login.");
+          throw new Error(result.error || "Acesso recusado. Verifique os dados.");
         }
 
-        // Salva dados na sessão local para persistência de abas
+        // Salva a sessão no navegador
         localStorage.setItem("currentUser", JSON.stringify(result.user));
         
-        alert(`Bem-vindo, ${result.user.name}!`);
-        
-        // Ativa a transição visual e renderiza o conteúdo do painel
-        showDashboard(result.user, result.state);
-        
+        // Destrava a tela aplicando as regras do seu CSS!
+        setupUserSession(result.user, result.state);
+
       } catch (err) {
-        errorDiv.textContent = err.message;
-        errorDiv.style.display = 'block';
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
       }
     });
 
-    // Função responsável por alternar as telas e exibir a Dashboard
-    function showDashboard(user, stateData) {
-      document.getElementById('login-screen').style.display = 'none';
-      
-      const dashboard = document.getElementById('dashboard-container');
-      dashboard.style.display = 'block';
-      document.body.style.alignItems = 'flex-start'; // Ajusta alinhamento para telas longas
+    // 3. Organiza a interface com base no usuário logado (Admin vs Técnico)
+    function setupUserSession(user, freshState) {
+      // Remove a classe locked para esconder o Login e exibir o .app-shell!
+      document.body.classList.remove('locked');
 
-      document.getElementById('nav-user-name').textContent = user.name;
-      document.getElementById('nav-user-role').textContent = user.role;
+      // Alimenta os campos de perfil do cabeçalho e menu lateral
+      document.getElementById('connected-user-name').textContent = user.name;
+      document.getElementById('user-role-badge').textContent = user.role.toUpperCase();
 
-      if (stateData) {
-        updateTables(stateData);
+      // Controle de privilégios: Mostra o botão de cadastro apenas se for Admin
+      const addBtn = document.getElementById('admin-add-btn');
+      if (addBtn) {
+        addBtn.style.display = user.role === 'admin' ? 'inline-flex' : 'none';
+      }
+
+      if (freshState) {
+        appState = freshState;
+        renderData();
       } else {
+        // Busca atualização em segundo plano
         fetch('/api/bootstrap')
           .then(res => res.json())
-          .then(data => updateTables(data))
-          .catch(err => console.error("Erro ao atualizar tabelas do painel:", err));
+          .then(data => {
+            appState = data;
+            renderData();
+          })
+          .catch(err => console.error("Erro ao sincronizar tabelas:", err));
       }
     }
 
-    // Atualiza dinamicamente as tabelas de insumos do painel com os dados reais do backend
-    function updateTables(data) {
-      // 1. Tabela de Insumos
-      const itemsBody = document.querySelector('#items-table tbody');
-      if (itemsBody && data.items && data.items.length > 0) {
-        itemsBody.innerHTML = '';
-        data.items.forEach(item => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td><strong>${item.code}</strong></td>
-            <td>${item.name}</td>
-            <td>${item.category || ''}</td>
-            <td style="color: ${item.qty <= item.min ? 'var(--primary-color)' : 'inherit'}; font-weight: bold;">${item.qty}</td>
-            <td>${item.min || 0}</td>
-            <td>${item.supplier || ''}</td>
+    // 4. Renderiza as listas e métricas aproveitando suas classes CSS
+    function renderData() {
+      // Atualiza os contadores das caixas de métricas (metrics-grid)
+      if (appState.items) {
+        document.getElementById('metric-total-items').textContent = appState.items.length;
+        const critical = appState.items.filter(i => i.qty <= (i.min || 0)).length;
+        document.getElementById('metric-critical-items').textContent = critical;
+      }
+
+      // Renderiza prévia de itens na Dashboard
+      const previewContainer = document.getElementById('dashboard-items-preview');
+      if (previewContainer && appState.items) {
+        previewContainer.innerHTML = '';
+        appState.items.slice(0, 5).forEach(item => {
+          const isCritical = item.qty <= (item.min || 0);
+          const div = document.createElement('div');
+          div.className = 'compact-row';
+          div.innerHTML = `
+            <strong>${item.name}</strong>
+            <span class="muted">${item.code}</span>
+            <span>Qtd: ${item.qty}</span>
+            <span class="pill ${isCritical ? 'critical' : ''}">${isCritical ? 'CRÍTICO' : 'ESTÁVEL'}</span>
           `;
-          itemsBody.appendChild(row);
+          previewContainer.appendChild(div);
         });
       }
 
-      // 2. Tabela de Solicitações
-      const reqsBody = document.querySelector('#requests-table tbody');
-      if (reqsBody && data.requests && data.requests.length > 0) {
-        reqsBody.innerHTML = '';
-        data.requests.forEach(req => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${req.technician}</td>
-            <td>${req.itemName}</td>
-            <td><strong>${req.qty}</strong></td>
+      // Renderiza os itens na aba Estoque Completo usando seu formato de tabela/linha
+      const fullInventory = document.getElementById('inventory-list');
+      if (fullInventory && appState.items) {
+        fullInventory.innerHTML = '';
+        appState.items.forEach(item => {
+          const isCritical = item.qty <= (item.min || 0);
+          const div = document.createElement('div');
+          div.className = 'table-row';
+          div.innerHTML = `
+            <div><strong>${item.name}</strong> <br><small class="muted">${item.code}</small></div>
+            <span>Cat: ${item.category || 'Geral'}</span>
+            <span style="font-weight:700; color:${isCritical ? 'var(--red)' : 'inherit'}">${item.qty} un</span>
+            <span class="pill ${isCritical ? 'critical' : ''}">${isCritical ? 'Repor' : 'Ok'}</span>
           `;
-          reqsBody.appendChild(row);
+          fullInventory.appendChild(div);
         });
       }
     }
 
-    // Função para fazer logout e limpar a sessão
+    // 5. Gerenciador de navegação entre as suas Views (.view)
+    function switchView(viewId) {
+      // Remove a classe active de todas as abas e botões
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      
+      // Ativa a aba selecionada
+      document.getElementById(`view-${viewId}`).classList.add('active');
+      
+      // Destaca o botão correto no menu lateral
+      const btn = Array.from(document.querySelectorAll('.nav-item')).find(b => b.textContent.toLowerCase().includes(viewId === 'items' ? 'estoque' : viewId));
+      if (btn) btn.classList.add('active');
+
+      // Atualiza o título do topo
+      const titles = { dashboard: 'Dashboard', items: 'Estoque de Insumos', requests: 'Solicitações' };
+      document.getElementById('view-title').textContent = titles[viewId] || 'Painel';
+    }
+
+    // 6. Encerra a sessão e bloqueia o app novamente
     function logout() {
-      localStorage.clear();
+      localStorage.removeItem("currentUser");
+      document.body.classList.add('locked');
       window.location.reload();
     }
 
