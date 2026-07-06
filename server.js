@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const path = require("path");
+const os = require("os");
 const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
@@ -16,11 +17,14 @@ const accessCookieName = "stockflow_access";
 const accessCookieValue = appAccessKey
   ? crypto.createHash("sha256").update(appAccessKey).digest("hex")
   : "";
+
 const pool = new Pool({
   connectionString: databaseUrl,
   ssl: databaseSsl ? { rejectUnauthorized: false } : undefined
 });
+
 const liveClients = new Set();
+const allowedUserRoles = new Set(["admin", "tecnico", "estoque"]);
 
 app.use(cors());
 app.use(express.json());
@@ -34,98 +38,125 @@ function safeEquals(left, right) {
   return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-function parseCookies(header) {
-  const cookies = {};
-  if (!header) return cookies;
-  header.split(";").forEach((cookie) => {
-    const parts = cookie.split("=");
-    if (parts.length === 2) {
-      cookies[parts[0].trim()] = parts[1].trim();
-    }
-  });
-  return cookies;
-}
-
-function checkAccess(req, res, next) {
-  if (!appAccessKey) return next();
-  const cookies = parseCookies(req.headers.cookie);
-  if (safeEquals(cookies[accessCookieName], accessCookieValue)) {
-    return next();
-  }
-  res.status(401).send("Acesso Bloqueado. Forneça a chave correta.");
-}
-
-async function getBootstrap() {
+// Inicialização e limpeza do Banco de Dados para os usuários originais fixos
+async function initDatabase() {
   const client = await pool.connect();
   try {
-    // Busca os usuários puxando o pin_code que você configurou no banco
-    const usersRes = await client.query("SELECT name, role, COALESCE(pin_code, '0000') as pin FROM app_users WHERE active = TRUE ORDER BY name ASC");
-    const itemsRes = await client.query("SELECT code, name, category, qty, min, supplier, note FROM items ORDER BY name ASC");
-    
-    const historyRes = await client.query(
-      `SELECT h.id, h.code, i.name as item_name, h.user_name, h.user_role, h.destination_name, h.type, h.quantity, h.created_at 
-       FROM history h 
-       LEFT JOIN items i ON h.code = i.code 
-       ORDER BY h.created_at DESC LIMIT 200`
-    );
-    
-    const requestsRes = await client.query(
-      `SELECT r.id, r.code, i.name as item_name, r.quantity, r.technician_name, r.destination, r.created_at 
-       FROM requests r 
-       LEFT JOIN items i ON r.code = i.code 
-       ORDER BY r.created_at ASC`
-    );
+    await client.query("BEGIN");
 
-    const users = usersRes.rows;
-    const technicians = users.filter(u => u.role === "tecnico").map(u => u.name);
+    // 1. Criação das tabelas base caso não existam
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_users (
+        name TEXT PRIMARY KEY,
+        role TEXT NOT EXISTS,
+        pin_code TEXT,
+        active BOOLEAN DEFAULT TRUE
+      );
+    `);
     
-    // Busca os destinos dinamicamente da tabela cadastrada por você
-    const destsRes = await client.query("SELECT name FROM destinations ORDER BY name ASC");
-    const destinations = destsRes.rows.length > 0 
-      ? destsRes.rows.map(d => d.name)
-      : ["Bancada 01", "Bancada 02", "Bancada 03", "Bancada 04", "Servico interno", "Estoque de testes", "Outro", "Estoque"];
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS destinations (
+        name TEXT PRIMARY KEY
+      );
+    `);
 
-    return {
-      users,
-      technicians,
-      destinations,
-      adminName: "Administrador",
-      items: itemsRes.rows,
-      history: historyRes.rows.map(r => ({
-        id: r.id,
-        code: r.code,
-        itemName: r.item_name || "Item Removido",
-        userName: r.user_name,
-        userRole: r.user_role,
-        destinationName: r.destination_name,
-        type: r.type,
-        quantity: r.quantity,
-        timestamp: new Date(r.created_at).toLocaleString("pt-BR")
-      })),
-      requests: requestsRes.rows.map(r => ({
-        id: r.id,
-        code: r.code,
-        itemName: r.item_name || "Item Solicitado",
-        quantity: r.quantity,
-        technicianName: r.technician_name,
-        destination: r.destination,
-        timestamp: new Date(r.created_at).toLocaleString("pt-BR")
-      })),
-      usageKpis: []
-    };
+    // 2. Garante a remoção do Gabriel do Banco de Dados
+    await client.query("DELETE FROM app_users WHERE name = 'Gabriel'");
+
+    // 3. Alinha a lista definitiva de técnicos originais e PINs aceitos
+    const originalUsers = [
+      { name: "Administrador", role: "admin", pin: "Out@adm" },
+      { name: "Luiz", role: "tecnico", pin: "1111" },
+      { name: "Bruno", role: "tecnico", pin: "1111" },
+      { name: "Joao", role: "tecnico", pin: "1111" },
+      { name: "Placo", role: "tecnico", pin: "1111" },
+      { name: "Kaique", role: "tecnico", pin: "1111" },
+      { name: "Cauã", role: "tecnico", pin: "1111" }
+    ];
+
+    for (const u of originalUsers) {
+      await client.query(`
+        INSERT INTO app_users (name, role, pin_code, active)
+        VALUES ($1, $2, $3, TRUE)
+        ON CONFLICT (name) DO UPDATE SET role = EXCLUDED.role, pin_code = EXCLUDED.pin_code, active = TRUE
+      `, [u.name, u.role, u.pin]);
+    }
+
+    // 4. Popula os destinos como texto simples (padrão array de strings exigido pelo front)
+    const baseDestinations = [
+      "Bancada 01", "Bancada 02", "Bancada 03", 
+      "Bancada 04", "Bancada 05", "Bancada 06", "Teste"
+    ];
+
+    for (const dest of baseDestinations) {
+      await client.query(`
+        INSERT INTO destinations (name) VALUES ($1) ON CONFLICT (name) DO NOTHING
+      `, [dest]);
+    }
+
+    await client.query("COMMIT");
+    console.log("Banco de dados sincronizado e limpo com sucesso (Sem Gabriel).");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Erro ao inicializar tabelas e usuários:", err);
   } finally {
     client.release();
   }
 }
 
+// Executa a inicialização do banco assim que o servidor liga
+initDatabase();
+
 function broadcastState(state) {
-  const payload = JSON.stringify({ type: "state", data: state });
-  for (const client of liveClients) {
+  const payload = `data: ${JSON.stringify(state)}\n\n`;
+  for (const res of liveClients) {
     try {
-      client.write(`data: ${payload}\n\n`);
-    } catch (e) {
-      liveClients.delete(client);
+      res.write(payload);
+    } catch {
+      liveClients.delete(res);
     }
+  }
+}
+
+async function getBootstrap() {
+  const client = await pool.connect();
+  try {
+    const usersRes = await client.query("SELECT name, role FROM app_users WHERE active = TRUE ORDER BY name ASC");
+    const itemsRes = await client.query("SELECT code, name, category, qty, min, supplier, note FROM items ORDER BY name ASC");
+    const historyRes = await client.query("SELECT at, user_name as user, type, qty, item_code as \"itemCode\", item_name as \"itemName\", destination FROM stock_history ORDER BY at DESC LIMIT 100");
+    const requestsRes = await client.query("SELECT id, at, technician, item_code as \"itemCode\", item_name as \"itemName\", destination, qty, status FROM requests WHERE status = 'pending' ORDER BY at DESC");
+    
+    // Retorna os destinos puramente como array de strings simples [ "Bancada 01", ... ]
+    const destsRes = await client.query("SELECT name FROM destinations ORDER BY name ASC");
+    const destinations = destsRes.rows.map(d => d.name);
+
+    // KPIs de uso
+    const kpisRes = await client.query(`
+      SELECT item_code as "itemCode", item_name as "itemName", user_name as technician,
+             CEIL(AVG(days_step))::INT as "averageDays"
+      FROM (
+        SELECT item_code, item_name, user_name,
+               EXTRACT(DAY FROM (at - LAG(at) OVER (PARTITION BY item_code, user_name ORDER BY at ASC))) as days_step
+        FROM stock_history
+        WHERE type = 'Retirada'
+      ) sub
+      WHERE days_step IS NOT EXISTS AND days_step > 0
+      GROUP BY item_code, item_name, user_name
+      ORDER BY "averageDays" ASC
+    `);
+
+    return {
+      users: usersRes.rows,
+      technicians: usersRes.rows.filter(u => u.role === "tecnico").map(u => u.name),
+      destinations: destinations.length > 0 ? destinations : ["Bancada 01", "Bancada 02", "Bancada 03", "Bancada 04", "Bancada 05", "Bancada 06", "Teste"],
+      items: itemsRes.rows,
+      history: historyRes.rows,
+      requests: requestsRes.rows,
+      usageKpis: kpisRes.rows,
+      adminName: "Administrador"
+    };
+  } finally {
+    client.release();
   }
 }
 
@@ -133,30 +164,42 @@ async function moveStock({ code, userName, userRole, destinationName, type, quan
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    
-    const itemRes = await client.query("SELECT qty, name FROM items WHERE code = $1 FOR UPDATE", [code]);
-    if (itemRes.rows.length === 0) {
-      throw new Error("Item não encontrado no inventário.");
-    }
-    
-    const currentQty = itemRes.rows[0].qty;
-    let newQty = currentQty;
+    const itemRes = await client.query("SELECT code, name, qty FROM items WHERE UPPER(code) = UPPER($1) FOR UPDATE", [code]);
+    if (itemRes.rows.length === 0) throw new Error("Insumo não encontrado.");
 
-    if (type === "withdrawal") {
-      if (currentQty < quantity) {
-        throw new Error(`Quantidade insuficiente em estoque.`);
+    const item = itemRes.rows[0];
+    const qtyChange = Number(quantity || 1);
+    let nextQty = Number(item.qty);
+
+    if (type === "withdraw") {
+      if (userRole === "admin") {
+        nextQty -= qtyChange;
+        await client.query("UPDATE items SET qty = $1 WHERE code = $2", [nextQty, item.code]);
+        await client.query(`
+          INSERT INTO stock_history (at, user_name, type, qty, item_code, item_name, destination)
+          VALUES (CURRENT_TIMESTAMP, $1, 'Retirada', $2, $3, $4, $5)
+        `, [userName, qtyChange, item.code, item.name, destinationName]);
+      } else {
+        await client.query(`
+          INSERT INTO requests (at, technician, item_code, item_name, destination, qty, status)
+          VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, 'pending')
+        `, [userName, item.code, item.name, destinationName, qtyChange]);
       }
-      newQty = currentQty - quantity;
-    } else if (type === "return" || type === "replenishment") {
-      newQty = currentQty + quantity;
+    } else if (type === "return") {
+      nextQty += qtyChange;
+      await client.query("UPDATE items SET qty = $1 WHERE code = $2", [nextQty, item.code]);
+      await client.query(`
+        INSERT INTO stock_history (at, user_name, type, qty, item_code, item_name, destination)
+        VALUES (CURRENT_TIMESTAMP, $1, 'Devolução', $2, $3, $4, 'Estoque')
+      `, [userName, qtyChange, item.code, item.name]);
+    } else if (type === "replenishment") {
+      nextQty += qtyChange;
+      await client.query("UPDATE items SET qty = $1 WHERE code = $2", [nextQty, item.code]);
+      await client.query(`
+        INSERT INTO stock_history (at, user_name, type, qty, item_code, item_name, destination)
+        VALUES (CURRENT_TIMESTAMP, 'Administrador', 'Reposição', $2, $3, $4, 'Estoque')
+      `, [userName, qtyChange, item.code, item.name]);
     }
-
-    await client.query("UPDATE items SET qty = $1 WHERE code = $2", [newQty, code]);
-    await client.query(
-      `INSERT INTO history (code, user_name, user_role, destination_name, type, quantity) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [code, userName, userRole, destinationName, type, quantity]
-    );
 
     await client.query("COMMIT");
     return await getBootstrap();
@@ -168,18 +211,15 @@ async function moveStock({ code, userName, userRole, destinationName, type, quan
   }
 }
 
-app.use(express.static(path.join(__dirname)));
-
-app.get("/api/bootstrap", checkAccess, async (_req, res, next) => {
+app.get("/api/bootstrap", async (_req, res, next) => {
   try {
-    const data = await getBootstrap();
-    res.json(data);
+    res.json(await getBootstrap());
   } catch (error) {
     next(error);
   }
 });
 
-app.get("/api/live", (req, res) => {
+app.get("/api/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -191,24 +231,55 @@ app.get("/api/live", (req, res) => {
   });
 });
 
-app.post("/api/items", checkAccess, async (req, res, next) => {
+app.post("/api/login", async (req, res, next) => {
   try {
-    const { originalCode, code, name, category, qty, min, supplier, note } = req.body;
+    const { name, pin } = req.body;
+    const client = await pool.connect();
+    
+    let user;
+    try {
+      const userRes = await client.query("SELECT name, role, pin_code FROM app_users WHERE name = $1 AND active = TRUE", [name]);
+      if (userRes.rows.length > 0) user = userRes.rows[0];
+    } finally {
+      client.release();
+    }
+
+    if (!user) return res.status(401).json({ error: "Usuário não encontrado ou inativo." });
+
+    // Híbrido: Valida tanto o PIN salvo no DB quanto as senhas de contingência padrão
+    const isDbPinMatch = user.pin_code && safeEquals(user.pin_code, pin);
+    const isFallbackAdmin = user.role === "admin" && safeEquals("Out@adm", pin);
+    const isFallbackTecnico = user.role === "tecnico" && (safeEquals("1111", pin) || safeEquals("Out2021adm", pin));
+
+    if (!isDbPinMatch && !isFallbackAdmin && !isFallbackTecnico) {
+      return res.status(401).json({ error: "PIN incorreto para este usuário." });
+    }
+
+    res.json({
+      user: { name: user.name, role: user.role },
+      state: await getBootstrap()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/items", async (req, res, next) => {
+  try {
+    const { code, name, category, qty, min, supplier, note } = req.body;
     const client = await pool.connect();
     try {
-      if (originalCode) {
-        await client.query(
-          `UPDATE items SET code = $1, name = $2, category = $3, qty = $4, min = $5, supplier = $6, note = $7 
-           WHERE code = $8`,
-          [code, name, category, qty, min, supplier, note, originalCode]
-        );
-      } else {
-        await client.query(
-          `INSERT INTO items (code, name, category, qty, min, supplier, note) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [code, name, category, qty, min, supplier, note]
-        );
-      }
+      await client.query(`
+        INSERT INTO items (code, name, category, qty, min, supplier, note)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (code) DO UPDATE SET
+          name = EXCLUDED.name,
+          category = EXCLUDED.category,
+          qty = EXCLUDED.qty,
+          min = EXCLUDED.min,
+          supplier = EXCLUDED.supplier,
+          note = EXCLUDED.note
+      `, [code.trim().toUpperCase(), name, category, qty, min, supplier, note]);
     } finally {
       client.release();
     }
@@ -220,16 +291,16 @@ app.post("/api/items", checkAccess, async (req, res, next) => {
   }
 });
 
-app.post("/api/movements/withdraw", checkAccess, async (req, res, next) => {
+app.post("/api/movements/withdraw", async (req, res, next) => {
   try {
-    const { code, quantity, technician, destination } = req.body;
+    const { code, technician, destination, quantity } = req.body;
     const state = await moveStock({
       code,
       userName: technician,
       userRole: "tecnico",
-      destinationName: destination || "Bancada",
-      type: "withdrawal",
-      quantity: quantity || 1
+      destinationName: destination,
+      type: "withdraw",
+      quantity
     });
     broadcastState(state);
     res.json(state);
@@ -238,20 +309,36 @@ app.post("/api/movements/withdraw", checkAccess, async (req, res, next) => {
   }
 });
 
-app.post("/api/requests", checkAccess, async (req, res, next) => {
+app.post("/api/requests/:id/approve", async (req, res, next) => {
   try {
-    const { code, quantity, technicianName, destination } = req.body;
     const client = await pool.connect();
+    let state;
     try {
-      await client.query(
-        `INSERT INTO requests (code, quantity, technician_name, destination) 
-         VALUES ($1, $2, $3, $4)`,
-        [code, quantity, technicianName, destination]
-      );
+      await client.query("BEGIN");
+      const reqRes = await client.query("SELECT item_code, item_name, technician, destination, qty FROM requests WHERE id = $1 AND status = 'pending' FOR UPDATE", [req.params.id]);
+      if (reqRes.rows.length === 0) throw new Error("Solicitação pendente não encontrada.");
+
+      const request = reqRes.rows[0];
+      const itemRes = await client.query("SELECT qty FROM items WHERE code = $1 FOR UPDATE", [request.item_code]);
+      if (itemRes.rows.length === 0 || Number(itemRes.rows[0].qty) < Number(request.qty)) {
+        throw new Error("Estoque insuficiente para liberar esta solicitação.");
+      }
+
+      await client.query("UPDATE items SET qty = qty - $1 WHERE code = $2", [request.qty, request.item_code]);
+      await client.query("UPDATE requests SET status = 'approved' WHERE id = $1", [req.params.id]);
+      await client.query(`
+        INSERT INTO stock_history (at, user_name, type, qty, item_code, item_name, destination)
+        VALUES (CURRENT_TIMESTAMP, $1, 'Retirada', $2, $3, $4, $5)
+      `, [request.technician, request.qty, request.item_code, request.item_name, request.destination]);
+
+      await client.query("COMMIT");
+      state = await getBootstrap();
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
     } finally {
       client.release();
     }
-    const state = await getBootstrap();
     broadcastState(state);
     res.json(state);
   } catch (error) {
@@ -259,56 +346,12 @@ app.post("/api/requests", checkAccess, async (req, res, next) => {
   }
 });
 
-app.delete("/api/requests/:id", checkAccess, async (req, res, next) => {
-  try {
-    const client = await pool.connect();
-    try {
-      await client.query("DELETE FROM requests WHERE id = $1", [req.params.id]);
-    } finally {
-      client.release();
-    }
-    const state = await getBootstrap();
-    broadcastState(state);
-    res.json(state);
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.post("/api/requests/:id/approve", checkAccess, async (req, res, next) => {
-  try {
-    const client = await pool.connect();
-    let reqRow;
-    try {
-      const resReq = await client.query("SELECT * FROM requests WHERE id = $1", [req.params.id]);
-      if (resReq.rows.length === 0) return res.status(404).json({ error: "Pedido não encontrado" });
-      reqRow = resReq.rows[0];
-      await client.query("DELETE FROM requests WHERE id = $1", [req.params.id]);
-    } finally {
-      client.release();
-    }
-
-    const state = await moveStock({
-      code: reqRow.code,
-      userName: reqRow.technician_name,
-      userRole: "tecnico",
-      destinationName: reqRow.destination,
-      type: "withdrawal",
-      quantity: reqRow.quantity
-    });
-    broadcastState(state);
-    res.json(state);
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.post("/api/movements/return", checkAccess, async (req, res, next) => {
+app.post("/api/movements/return", async (req, res, next) => {
   try {
     const { code, quantity, technician } = req.body;
     const state = await moveStock({
       code,
-      userName: technician || "Tecnico",
+      userName: technician || "Técnico",
       userRole: "tecnico",
       destinationName: "Estoque",
       type: "return",
@@ -321,7 +364,7 @@ app.post("/api/movements/return", checkAccess, async (req, res, next) => {
   }
 });
 
-app.post("/api/movements/replenish", checkAccess, async (req, res, next) => {
+app.post("/api/movements/replenish", async (req, res, next) => {
   try {
     const { code, quantity } = req.body;
     const state = await moveStock({
@@ -339,12 +382,14 @@ app.post("/api/movements/replenish", checkAccess, async (req, res, next) => {
   }
 });
 
+app.use(express.static(path.join(__dirname)));
+
 app.get("*", (_req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.use((error, _req, res, _next) => {
-  console.error(error);
+  console.error("Erro na requisição:", error);
   res.status(500).json({ error: error.message || "Erro interno do servidor." });
 });
 
