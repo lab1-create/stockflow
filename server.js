@@ -22,7 +22,6 @@ const pool = new Pool({
   ssl: databaseSsl ? { rejectUnauthorized: false } : undefined
 });
 const liveClients = new Set();
-const allowedUserRoles = new Set(["admin", "tecnico", "estoque"]);
 
 app.use(cors());
 app.use(express.json());
@@ -54,39 +53,23 @@ function checkAccess(req, res, next) {
   if (safeEquals(cookies[accessCookieName], accessCookieValue)) {
     return next();
   }
-  res.status(401).send("Acesso Bloqueado. Forneça a chave correta no cabeçalho ou cookie.");
-}
-
-async function query(text, params) {
-  const start = Date.now();
-  const res = await pool.query(text, params);
-  const duration = Date.now() - start;
-  return res;
-}
-
-async function findOrCreateUser(client, name, role) {
-  const selectRes = await client.query("SELECT id FROM app_users WHERE name = $1", [name]);
-  if (selectRes.rows.length > 0) {
-    return selectRes.rows[0].id;
-  }
-  const insertRes = await client.query(
-    "INSERT INTO app_users (name, role) VALUES ($1, $2) RETURNING id",
-    [name, role]
-  );
-  return insertRes.rows[0].id;
+  res.status(401).send("Acesso Bloqueado. Forneça a chave correta.");
 }
 
 async function getBootstrap() {
   const client = await pool.connect();
   try {
-    const usersRes = await client.query("SELECT name, role FROM app_users ORDER BY name ASC");
+    // Retorna todos os usuários estruturados com seus pins originais
+    const usersRes = await client.query("SELECT name, role, pin FROM app_users ORDER BY name ASC");
     const itemsRes = await client.query("SELECT code, name, category, qty, min, supplier, note FROM items ORDER BY name ASC");
+    
     const historyRes = await client.query(
       `SELECT h.id, h.code, i.name as item_name, h.user_name, h.user_role, h.destination_name, h.type, h.quantity, h.created_at 
        FROM history h 
        LEFT JOIN items i ON h.code = i.code 
-       ORDER BY h.created_at DESC LIMIT 200`
+       ORDER FROM h.created_at DESC LIMIT 200`
     );
+    
     const requestsRes = await client.query(
       `SELECT r.id, r.code, i.name as item_name, r.quantity, r.technician_name, r.destination, r.created_at 
        FROM requests r 
@@ -100,11 +83,6 @@ async function getBootstrap() {
     const destinationsSet = new Set([
       "Bancada 01", "Bancada 02", "Bancada 03", "Bancada 04", "Bancada 05", "Bancada 06", "Teste"
     ]);
-    users.forEach(u => {
-      if (u.role === "tecnico") {
-        destinationsSet.add(`Bancada de ${u.name}`);
-      }
-    });
 
     return {
       users,
@@ -126,7 +104,7 @@ async function getBootstrap() {
       requests: requestsRes.rows.map(r => ({
         id: r.id,
         code: r.code,
-        itemName: r.item_name || "Item Desconhecido",
+        itemName: r.item_name || "Item Solicitado",
         quantity: r.quantity,
         technicianName: r.technician_name,
         destination: r.destination,
@@ -165,7 +143,7 @@ async function moveStock({ code, userName, userRole, destinationName, type, quan
 
     if (type === "withdrawal") {
       if (currentQty < quantity) {
-        throw new Error(`Quantidade insuficiente em estoque. Disponível: ${currentQty}`);
+        throw new Error(`Quantidade insuficiente em estoque.`);
       }
       newQty = currentQty - quantity;
     } else if (type === "return" || type === "replenishment") {
@@ -210,39 +188,6 @@ app.get("/api/live", (req, res) => {
   req.on("close", () => {
     liveClients.delete(res);
   });
-});
-
-app.post("/api/access", (req, res) => {
-  const { key } = req.body;
-  if (!appAccessKey || safeEquals(key, appAccessKey)) {
-    res.cookie(accessCookieName, accessCookieValue, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict"
-    });
-    return res.json({ success: true });
-  }
-  res.status(401).json({ error: "Chave de acesso incorreta" });
-});
-
-app.post("/api/users", checkAccess, async (req, res, next) => {
-  try {
-    const { name, role } = req.body;
-    if (!name || !role || !allowedUserRoles.has(role)) {
-      return res.status(400).json({ error: "Dados inválidos para o utilizador." });
-    }
-    const client = await pool.connect();
-    try {
-      await findOrCreateUser(client, name, role);
-    } finally {
-      client.release();
-    }
-    const state = await getBootstrap();
-    broadcastState(state);
-    res.json(state);
-  } catch (error) {
-    next(error);
-  }
 });
 
 app.post("/api/items", checkAccess, async (req, res, next) => {
@@ -398,10 +343,10 @@ app.get("*", (_req, res) => {
 });
 
 app.use((error, _req, res, _next) => {
-  console.error("Erro na aplicação:", error);
+  console.error(error);
   res.status(500).json({ error: error.message || "Erro interno do servidor." });
 });
 
 app.listen(port, host, () => {
-  console.log(`Servidor a correr em http://${host}:${port}`);
+  console.log(`Servidor rodando em http://${host}:${port}`);
 });
