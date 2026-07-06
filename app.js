@@ -2,7 +2,7 @@ const STORAGE_KEY = "stockflow-state-v2";
 const API_BASE = "/api";
 const LIVE_CHANNEL = "stockflow-live";
 
-// Mapeamento dinâmico de técnicos para as suas respetivas bancadas
+// Mapeamento automático de técnicos para suas bancadas padrão
 const TECHNICIAN_DESTINATIONS = {
   Luiz: "Bancada 01",
   Bruno: "Bancada 02",
@@ -177,7 +177,6 @@ async function handleLogin(event) {
 
   const user = state.users.find(u => u.name === usernameInput);
 
-  // Validação real e segura! Compara estritamente o PIN digitado com o do banco
   if (!user || String(user.pin) !== String(pinInput)) {
     $("#login-error").textContent = "PIN incorreto. Verifique seus dados.";
     return;
@@ -485,7 +484,6 @@ function renderDestinations() {
   grid.innerHTML = "";
   
   let uniqueDestinations = [];
-  // Prioriza a bancada padrão vinculada ao técnico logado
   if (currentUser && isTecnico() && TECHNICIAN_DESTINATIONS[currentUser.name]) {
     uniqueDestinations.push(TECHNICIAN_DESTINATIONS[currentUser.name]);
   }
