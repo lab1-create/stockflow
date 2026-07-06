@@ -2,7 +2,7 @@ import { apiRequest, getToken } from "./api.js";
 import { $, $$, escapeHtml, formatDate, normalize, openModal, setLoading, toast } from "./utils.js";
 
 // ==========================================
-// 1. MÓDULOS INTEGRADOS (Substituem os ficheiros errados)
+// 1. MÓDULOS INTEGRADOS (Locais, sem necessidade de export)
 // ==========================================
 
 async function login(email, senha) {
@@ -32,18 +32,18 @@ function metric(label, value, className = "") {
 function historyRow(entry) {
   return `
     <div class="table-row">
-      <strong>${entry.itemName || "Item"}</strong>
-      <span>${entry.user || "Sistema"}</span>
-      <span>${entry.type || "-"}</span>
+      <strong>${escapeHtml(entry.itemName || "Item")}</strong>
+      <span>${escapeHtml(entry.user || "Sistema")}</span>
+      <span>${escapeHtml(entry.type || "-")}</span>
       <span>${entry.qty || 0} un. - ${formatDate(entry.at)}</span>
     </div>
   `;
 }
 
-function renderDashboard(state) {
-  const dashboard = state.dashboard || {};
-  const critical = (state.items || []).filter((item) => Number(item.qty) <= Number(item.min));
-  const topUsed = [...(state.history || [])]
+function renderDashboard(stateData) {
+  const dashboard = stateData.dashboard || {};
+  const critical = (stateData.items || []).filter((item) => Number(item.qty) <= Number(item.min));
+  const topUsed = [...(stateData.history || [])]
     .filter((entry) => entry.type === "Retirada" || entry.type === "Saida")
     .reduce((acc, entry) => {
       if (!entry.itemCode) return acc;
@@ -55,24 +55,24 @@ function renderDashboard(state) {
 
   return `
     <div class="metrics-grid">
-      ${metric("Produtos", dashboard.produtos ?? (state.items?.length || 0))}
+      ${metric("Produtos", dashboard.produtos ?? (stateData.items?.length || 0))}
       ${metric("Entradas Hoje", dashboard.entradas_hoje ?? 0)}
       ${metric("Saídas Hoje", dashboard.saidas_hoje ?? 0)}
       ${metric("Estoque Crítico", critical.length, critical.length > 0 ? "danger" : "")}
     </div>
     <div class="dashboard-grid">
       <section class="panel">
-        <div class="panel-head"><h3>Últimas Atividades</h3><span class="muted">${(state.history || []).length} registos</span></div>
+        <div class="panel-head"><h3>Últimas Atividades</h3><span class="muted">${(stateData.history || []).length} registos</span></div>
         <div class="table" style="--cols: 4">
           <div class="table-head"><span>Produto</span><span>Usuário</span><span>Tipo</span><span>Quando</span></div>
-          ${(state.history || []).slice(0, 8).map(historyRow).join("") || `<div class="table-row"><span class="muted">Nenhuma movimentação.</span></div>`}
+          ${(stateData.history || []).slice(0, 8).map(historyRow).join("") || `<div class="table-row"><span class="muted">Nenhuma movimentação.</span></div>`}
         </div>
       </section>
       <section class="panel">
         <div class="panel-head"><h3>Mais utilizados</h3></div>
         <div class="table" style="--cols: 3">
           <div class="table-head"><span>Produto</span><span>Código</span><span>Saídas</span></div>
-          ${topRows.map((row) => `<div class="table-row"><strong>${row.name}</strong><span>${row.code}</span><span>${row.qty}</span></div>`).join("") || `<div class="table-row"><span class="muted">Sem dados.</span></div>`}
+          ${topRows.map((row) => `<div class="table-row"><strong>${escapeHtml(row.name || "")}</strong><span>${escapeHtml(row.code || "")}</span><span>${row.qty}</span></div>`).join("") || `<div class="table-row"><span class="muted">Sem dados.</span></div>`}
         </div>
       </section>
     </div>
@@ -80,7 +80,7 @@ function renderDashboard(state) {
       <div class="panel-head"><h3>Estoque Crítico</h3></div>
       <div class="table" style="--cols: 4">
         <div class="table-head"><span>Produto</span><span>Código</span><span>Atual</span><span>Mínimo</span></div>
-        ${critical.map((item) => `<div class="table-row"><strong>${item.name}</strong><span>${item.code}</span><span>${item.qty}</span><span>${item.min}</span></div>`).join("") || `<div class="table-row"><span class="muted">Nenhum item em nível crítico.</span></div>`}
+        ${critical.map((item) => `<div class="table-row"><strong>${escapeHtml(item.name || "")}</strong><span>${escapeHtml(item.code || "")}</span><span>${item.qty}</span><span>${item.min}</span></div>`).join("") || `<div class="table-row"><span class="muted">Nenhum item em nível crítico.</span></div>`}
       </div>
     </section>
   `;
@@ -96,7 +96,7 @@ async function renderUsuarios(container) {
         <div class="panel-head"><h3>Utilizadores</h3></div>
         <div class="table" style="--cols: 3">
           <div class="table-head"><span>Nome</span><span>Email</span><span>Função</span></div>
-          ${Array.isArray(list) ? list.map(u => `<div class="table-row"><strong>${escapeHtml(u.name)}</strong><span>${escapeHtml(u.email)}</span><span>${u.role}</span></div>`).join("") : `<div class="table-row"><span class="muted">Sem utilizadores.</span></div>`}
+          ${Array.isArray(list) ? list.map(u => `<div class="table-row"><strong>${escapeHtml(u.name || "")}</strong><span>${escapeHtml(u.email || "")}</span><span>${escapeHtml(u.role || "")}</span></div>`).join("") : `<div class="table-row"><span class="muted">Sem utilizadores.</span></div>`}
         </div>
       </section>
     `;
@@ -105,9 +105,8 @@ async function renderUsuarios(container) {
   }
 }
 
-
 // ==========================================
-// 2. LÓGICA PRINCIPAL DO APP (O seu código revisto)
+// 2. LÓGICA PRINCIPAL DO APP
 // ==========================================
 
 const state = {
@@ -136,15 +135,10 @@ function applyPermissions() {
   $$("[data-view='relatorios']").forEach((node) => node.hidden = !isAdmin());
   $$("[data-view='usuarios']").forEach((node) => node.hidden = !isAdmin());
   $$("[data-view='configuracoes']").forEach((node) => node.hidden = !isAdmin());
+  
   const lbl = $("#session-label");
-  if (lbl) lbl.textContent = state.user ? `${state.user.name} - ${isAdmin() ? "Administrador" : "Técnico"}` : "Sessão";
-}
-
-async function loadBootstrap() {
-  try {
-    state.data = await apiRequest("/bootstrap");
-  } catch (e) {
-    console.error("Erro no bootstrap", e);
+  if (lbl) {
+    lbl.textContent = state.user ? `${state.user.name} - ${isAdmin() ? "Administrador" : "Técnico"}` : "Sessão";
   }
 }
 
@@ -333,10 +327,10 @@ async function handleWithdraw() {
     await apiRequest("/movements/withdraw", {
       method: "POST",
       body: JSON.stringify({
-        code: $("#withdraw-code").value,
-        technician: $("#withdraw-technician").value,
-        destination: $("#withdraw-destination").value,
-        quantity: Number($("#withdraw-qty").value || 1)
+        code: $("#withdraw-code")?.value || "",
+        technician: $("#withdraw-technician")?.value || "",
+        destination: $("#withdraw-destination")?.value || "",
+        quantity: Number($("#withdraw-qty")?.value || 1)
       })
     });
     await refresh();
@@ -351,7 +345,7 @@ async function handleReplenish() {
   try {
     await apiRequest("/movements/replenish", {
       method: "POST",
-      body: JSON.stringify({ code: $("#replenish-code").value, quantity: Number($("#replenish-qty").value || 1) })
+      body: JSON.stringify({ code: $("#replenish-code")?.value || "", quantity: Number($("#replenish-qty")?.value || 1) })
     });
     await refresh();
     const el = $("#replenish-result");
@@ -469,6 +463,7 @@ function bindShell() {
     state.user = null;
     document.body.classList.add("locked");
   });
+  
   $("#toggle-sidebar")?.addEventListener("click", () => $("#sidebar")?.classList.toggle("collapsed"));
   $("#mobile-menu")?.addEventListener("click", () => $("#sidebar")?.classList.toggle("open"));
   $$(".nav-item").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
