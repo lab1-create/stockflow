@@ -59,15 +59,15 @@ function checkAccess(req, res, next) {
 async function getBootstrap() {
   const client = await pool.connect();
   try {
-    // Retorna todos os usuários estruturados com seus pins originais
-    const usersRes = await client.query("SELECT name, role, pin FROM app_users ORDER BY name ASC");
+    // CORREÇÃO: Puxa a coluna pin_code correta que você definiu no banco
+    const usersRes = await client.query("SELECT name, role, COALESCE(pin_code, '0000') as pin FROM app_users WHERE active = TRUE ORDER BY name ASC");
     const itemsRes = await client.query("SELECT code, name, category, qty, min, supplier, note FROM items ORDER BY name ASC");
     
     const historyRes = await client.query(
       `SELECT h.id, h.code, i.name as item_name, h.user_name, h.user_role, h.destination_name, h.type, h.quantity, h.created_at 
        FROM history h 
        LEFT JOIN items i ON h.code = i.code 
-       ORDER FROM h.created_at DESC LIMIT 200`
+       ORDER BY h.created_at DESC LIMIT 200`
     );
     
     const requestsRes = await client.query(
@@ -80,14 +80,16 @@ async function getBootstrap() {
     const users = usersRes.rows;
     const technicians = users.filter(u => u.role === "tecnico").map(u => u.name);
     
-    const destinationsSet = new Set([
-      "Bancada 01", "Bancada 02", "Bancada 03", "Bancada 04", "Bancada 05", "Bancada 06", "Teste"
-    ]);
+    // Puxa as bancadas e destinos cadastrados dinamicamente do banco
+    const destsRes = await client.query("SELECT name FROM destinations ORDER BY name ASC");
+    const destinations = destsRes.rows.length > 0 
+      ? destsRes.rows.map(d => d.name)
+      : ["Bancada 01", "Bancada 02", "Bancada 03", "Bancada 04", "Servico interno", "Estoque de testes", "Outro", "Estoque"];
 
     return {
       users,
       technicians,
-      destinations: Array.from(destinationsSet),
+      destinations,
       adminName: "Administrador",
       items: itemsRes.rows,
       history: historyRes.rows.map(r => ({
