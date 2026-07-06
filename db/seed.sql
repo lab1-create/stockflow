@@ -1,35 +1,36 @@
 BEGIN;
 
--- Garante que as tabelas possuem as colunas corretas
+-- Garante que a tabela aceita os pin_codes corretamente
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS pin_code TEXT;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 
--- Insere ou atualiza os usuários com o pin_code correto
+-- Atualiza/Insere TODOS os usuários (os antigos + o Gabriel) garantindo compatibilidade de PINs
 INSERT INTO app_users (name, role, pin_code, active) VALUES
-  ('Administrador', 'admin', '0000', TRUE),
+  ('Administrador', 'admin', 'Out@adm', TRUE),
   ('Luiz', 'tecnico', '1111', TRUE),
   ('Bruno', 'tecnico', '1111', TRUE),
   ('Joao', 'tecnico', '1111', TRUE),
+  ('Placo', 'tecnico', '1111', TRUE),
+  ('Kaique', 'tecnico', '1111', TRUE),
+  ('Cauã', 'tecnico', '1111', TRUE),
   ('Gabriel', 'tecnico', '1111', TRUE)
 ON CONFLICT (name) DO UPDATE SET
   role = EXCLUDED.role,
   pin_code = EXCLUDED.pin_code,
   active = TRUE;
 
--- Garante que a tabela de destinos existe e insere os novos locais
-CREATE TABLE IF NOT EXISTS destinations (
-  name TEXT PRIMARY KEY
-);
-
-INSERT INTO destinations (name) VALUES
-  ('Bancada 01'),
-  ('Bancada 02'),
-  ('Bancada 03'),
-  ('Bancada 04'),
-  ('Servico interno'),
-  ('Estoque de testes'),
-  ('Outro'),
-  ('Estoque')
-ON CONFLICT (name) DO NOTHING;
+-- Atualiza a tabela de destinos com as novas bancadas e locais especiais
+INSERT INTO destinations (name, active) VALUES
+  ('Bancada 01', TRUE),
+  ('Bancada 02', TRUE),
+  ('Bancada 03', TRUE),
+  ('Bancada 04', TRUE),
+  ('Bancada 05', TRUE),
+  ('Bancada 06', TRUE),
+  ('Servico interno', TRUE),
+  ('Estoque de testes', TRUE),
+  ('Teste', TRUE),
+  ('Outro', TRUE)
+ON CONFLICT (name) DO UPDATE SET active = TRUE;
 
 COMMIT;
