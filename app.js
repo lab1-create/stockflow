@@ -1,6 +1,7 @@
 const STORAGE_KEY = "stockflow-state-v2";
 const API_BASE = "/api";
 const LIVE_CHANNEL = "stockflow-live";
+const API_URL = "https://stockflow-r037.onrender.com";
 const TECHNICIAN_DESTINATIONS = {
   Luiz: "Bancada 01",
   Henrique: "Bancada 02",
