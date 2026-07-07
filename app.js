@@ -495,7 +495,7 @@ function renderWithdraw() {
   $("#withdraw-content").innerHTML = `
     <div class="flow-title">
       <p class="eyebrow">Etapa 4</p>
-      <h2 style="font-size:1.5rem;">Confirmar retirada?</h2>
+      <h2>Confirmar retirada?</h2>
     </div>
     <div class="confirm-box">
       <div class="item-preview">
@@ -730,13 +730,14 @@ function renderTechnicianFilter() {
   select.value = selected;
 }
 
+// Removida a renderização antiga que carregava no dropdown (<select>)
 function renderLoginUsers() {
-  // Mantida sem ação conforme sua estrutura de campo de texto livre
+  // Nada a fazer aqui agora, pois usamos campo de texto livre.
 }
 
 async function handleLogin(event) {
   event.preventDefault();
-  const name = $("#login-user").value.trim(); 
+  const name = $("#login-user").value.trim(); // Modificado para obter do input texto livre
   const pin = $("#login-pin").value.trim();
   const error = $("#login-error");
   error.textContent = "";
@@ -968,7 +969,7 @@ async function handleReplenish() {
 
   const updatedItem = findItem(item.code);
   renderReplenishDone(updatedItem, before, qty);
-  saveState();
+  renderAll();
 }
 
 function openItemDialog(item) {
@@ -985,6 +986,7 @@ function openItemDialog(item) {
   dialog.showModal();
 }
 
+// Funções para Controle do Modal do Usuário
 function openUserDialog() {
   const dialog = $("#user-dialog");
   $("#user-name").value = "";
@@ -1003,31 +1005,98 @@ async function saveUser(event) {
 
   try {
     if (usingApi) {
-      const nextState = await apiRequest("/usuarios", {
+      const result = await apiRequest("/usuarios", {
         method: "POST",
         body: JSON.stringify(userPayload)
       });
-      replaceState(nextState);
+      replaceState(result);
     } else {
       const newUser = { name: userPayload.name, role: userPayload.role };
       state.users = state.users || [];
-      
-      const existingIdx = state.users.findIndex(u => normalize(u.name) === normalize(newUser.name));
-      if (existingIdx >= 0) {
-        state.users[existingIdx] = newUser;
-      } else {
-        state.users.push(newUser);
-      }
-      
-      if (newUser.role === "tecnico" && !state.technicians.includes(newUser.name)) {
-        state.technicians.push(newUser.name);
+      state.users.push(newUser);
+      if (userPayload.role === "tecnico" && !state.technicians.includes(userPayload.name)) {
+        state.technicians.push(userPayload.name);
       }
       saveState();
     }
-    
     $("#user-dialog").close();
+    renderAll();
+  } catch (error) {
+    alert("Erro ao cadastrar usuário: " + error.message);
+  }
+}
+
+async function saveItem(event) {
+  event.preventDefault();
+  const originalCode = $("#item-original-code").value;
+  const item = {
+    code: $("#item-code").value.trim().toUpperCase(),
+    name: $("#item-name").value.trim(),
+    category: $("#item-category").value.trim(),
+    qty: Number($("#item-qty").value),
+    min: Number($("#item-min").value),
+    supplier: $("#item-supplier").value.trim(),
+    note: $("#item-note").value.trim()
+  };
+
+  try {
+    if (usingApi) {
+      replaceState(await apiRequest("/items", {
+        method: "POST",
+        body: JSON.stringify(item)
+      }));
+    } else {
+      const list = state.items || [];
+      const idx = list.findIndex((i) => i.code.toUpperCase() === originalCode.toUpperCase());
+      if (idx > -1) {
+        list[idx] = item;
+      } else {
+        list.push(item);
+      }
+      saveState();
+    }
+    $("#item-dialog").close();
     renderAll();
   } catch (error) {
     alert(error.message);
   }
 }
+
+// Inicialização de Eventos Globais do Sistema
+document.addEventListener("DOMContentLoaded", async () => {
+  setupLocalRealtime();
+  await loadInitialState();
+
+  $("#login-form").addEventListener("submit", handleLogin);
+  $("#logout-button").addEventListener("click", logout);
+  $("#global-search").addEventListener("input", renderAll);
+  $("#return-button").addEventListener("click", handleReturn);
+  $("#return-code").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") handleReturn();
+  });
+
+  $("#new-item-button").addEventListener("click", () => openItemDialog(null));
+  $("#close-dialog").addEventListener("click", () => $("#item-dialog").close());
+  $("#item-form").addEventListener("submit", saveItem);
+
+  // Vinculação dos novos botões e ações do Usuário
+  $("#new-user-button").addEventListener("click", openUserDialog);
+  $("#close-user-dialog").addEventListener("click", () => $("#user-dialog").close());
+  $("#user-form").addEventListener("submit", saveUser);
+
+  $("#technician-filter")?.addEventListener("change", renderAll);
+
+  $$(".nav-item").forEach((button) => {
+    button.addEventListener("click", () => setView(button.dataset.view));
+  });
+
+  document.body.addEventListener("click", (event) => {
+    const jump = event.target.closest("[data-view-jump]");
+    if (jump) setView(jump.dataset.viewJump);
+  });
+
+  if (!restoreSession()) {
+    document.body.classList.add("locked");
+    $("#login-user").focus();
+  }
+});
